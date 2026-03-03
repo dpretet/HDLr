@@ -86,51 +86,54 @@ def walk(node, source, modules):
 
         module_obj = Module(name=module_name)
 
-        # ----------------------------------------------------
-        # PARAMETERS
-        # ----------------------------------------------------
-
-        param_list = next(
-            (c for c in node.children if c.type == "parameter_port_list"),
-            None
-        )
-
-        if param_list:
-            for param_decl in param_list.children:
-                if param_decl.type == "parameter_declaration":
-
-                    for assign in param_decl.children:
-                        if assign.type == "param_assignment":
-
-                            name = None
-                            value = None
-
-                            for part in assign.children:
-                                if part.type == "simple_identifier":
-                                    name = get_text(part, source)
-
-                                # everything after '=' is value
-                                if part.type not in (
-                                    "simple_identifier",
-                                    "=",
-                                ):
-                                    value = get_text(part, source)
-
-                            if name and value:
-                                module_obj.parameters.append(
-                                    Parameter(name=name, value=value)
-                                )
-
-        # ----------------------------------------------------
-        # ANSI PORTS
-        # ----------------------------------------------------
-
         ansi_header = next(
             (c for c in node.children if c.type == "module_ansi_header"),
             None
         )
 
         if ansi_header:
+            # ----------------------------------------------------
+            # PARAMETERS
+            # ----------------------------------------------------
+
+            param_list = next(
+                (c for c in ansi_header.children if c.type == "parameter_port_list"),
+                None
+            )
+
+            if param_list:
+
+                stack = [param_list]
+
+                while stack:
+                    node_ = stack.pop()
+
+                    if node_.type == "param_assignment":
+
+                        name = None
+                        value = None
+
+                        for child in node_.children:
+
+                            if child.type == "parameter_identifier":
+                                name = get_text(child, source)
+
+                            elif child.type == "constant_param_expression":
+                                value = get_text(child, source)
+
+                        if name:
+                            module_obj.parameters.append(
+                                Parameter(
+                                    name=name,
+                                    value=value
+                                )
+                            )
+
+                    stack.extend(node_.children)
+            # ----------------------------------------------------
+            # ANSI PORTS
+            # ----------------------------------------------------
+
             port_list = next(
                 (c for c in ansi_header.children if c.type == "list_of_port_declarations"),
                 None
