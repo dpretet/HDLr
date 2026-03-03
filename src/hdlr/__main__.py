@@ -25,8 +25,13 @@ def main():
             modules = parse_verilog(f)
             for m in modules:
                 print(f"📦 Module: {m.name}")
-                for p in m.ports:
-                    print(f"   └── {p.direction} {p.name}")
+
+                for p in m.parameters:
+                    print(f"   🔧 parameter {p.name} = {p.value}")
+
+                for port in m.ports:
+                    w = f"{port.width} " if port.width else ""
+                    print(f"   └── {port.direction} {w}{port.name}")
 
 if __name__ == "__main__":
     main()
