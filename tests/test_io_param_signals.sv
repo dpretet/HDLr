@@ -12,7 +12,8 @@ module ModuleName
     input  wire aclk,
     input  wire aresetn,
     output logic encoded,
-    output logic [3:0] encoded1
+    output logic [3:0] encoded1,
+    output logic [4-1:0] encoded2
     );
 
     parameter ACLKK = 5;

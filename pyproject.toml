@@ -16,6 +16,7 @@ dependencies = [
     "tree-sitter",
     "tree-sitter-verilog",
     "tree-sitter-vhdl",
+    "tree-sitter-systemverilog",
 ]
 
 [project.scripts]

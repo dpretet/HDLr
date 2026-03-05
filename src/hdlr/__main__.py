@@ -10,7 +10,7 @@ HDLr main()
 
 from hdlr.cli import build_parser
 from hdlr.core.scanner import collect_files
-from hdlr.frontend.verilog import parse_verilog
+from hdlr.frontend import get_frontend
 
 
 def main():
@@ -20,9 +20,14 @@ def main():
     if args.command == "scan":
         files = collect_files(args.inputs)
 
+        # ✅ langage configurable plus tard
+        frontend = get_frontend("verilog")
+
         for f in files:
             print(f"\n📄 {f}")
-            modules = parse_verilog(f)
+
+            modules = frontend.parse_file(f)
+
             for m in modules:
                 print(f"📦 Module: {m.name}")
 
@@ -30,8 +35,14 @@ def main():
                     print(f"   🔧 parameter {p.name} = {p.value}")
 
                 for port in m.ports:
-                    w = f"{port.width} " if port.width else ""
-                    print(f"   └── {port.direction} {w}{port.name}")
+                    if port.width:
+                        msb, lsb = port.width
+                        width_str = f"[{msb}:{lsb}] "
+                    else:
+                        width_str = ""
+
+                    print(f"   └── {port.direction} {width_str}{port.name}")
+
 
 if __name__ == "__main__":
     main()
