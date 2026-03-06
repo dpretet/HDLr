@@ -263,10 +263,6 @@ class VerilogIRBuilder(IRBuilder):
     # Internal Signals
     # ---------------------------------------------------------
 
-# ---------------------------------------------------------
-# Internal Signals
-# ---------------------------------------------------------
-
     def _extract_signals(self, node, module):
 
         for item in node.children:
@@ -274,26 +270,22 @@ class VerilogIRBuilder(IRBuilder):
             if item.type != "module_or_generate_item":
                 continue
 
-            # ✅ niveau intermédiaire que tu n'avais pas
-            pkg_decl = next(
-                (c for c in item.children
-                if c.type == "package_or_generate_item_declaration"),
-                None
-            )
+            # ⚠️ NE PAS utiliser next()
+            for pkg_decl in item.children:
 
-            if pkg_decl is None:
-                continue
+                if pkg_decl.type != "package_or_generate_item_declaration":
+                    continue
 
-            data_decl = next(
-                (c for c in pkg_decl.children
-                if c.type == "data_declaration"),
-                None
-            )
+                # -------------------------
+                # data_declaration
+                # -------------------------
+                for child in pkg_decl.children:
 
-            if data_decl is None:
-                continue
+                    if child.type == "data_declaration":
+                        self._handle_data_declaration(child, module)
 
-            self._handle_data_declaration(data_decl, module)
+                    elif child.type == "net_declaration":
+                        self._handle_net_declaration(child, module)
 
 
     def _handle_data_declaration(self, node, module):
@@ -365,6 +357,69 @@ class VerilogIRBuilder(IRBuilder):
                     width=width
                 )
             )
+
+    def _handle_net_declaration(self, node, module):
+
+        kind = None
+        width = None
+
+        # -------------------------
+        # net_type (wire, tri, etc.)
+        # -------------------------
+        net_type_node = next(
+            (c for c in node.children if c.type == "net_type"),
+            None
+        )
+
+        if net_type_node:
+            kind = net_type_node.text.decode()
+
+        # -------------------------
+        # packed_dimension (width)
+        # -------------------------
+        dtype_wrapper = next(
+            (c for c in node.children
+            if c.type.startswith("data_type_or_implicit")),
+            None
+        )
+
+        if dtype_wrapper:
+            width = self._find_packed_dimension(dtype_wrapper)
+
+        # -------------------------
+        # list_of_net_decl_assignments
+        # -------------------------
+        list_node = next(
+            (c for c in node.children
+            if c.type == "list_of_net_decl_assignments"),
+            None
+        )
+
+        if not list_node:
+            return
+
+        for decl in list_node.children:
+
+            if decl.type != "net_decl_assignment":
+                continue
+
+            ident = next(
+                (c for c in decl.children
+                if c.type == "simple_identifier"),
+                None
+            )
+
+            if not ident:
+                continue
+
+            module.signals.append(
+                Signal(
+                    name=ident.text.decode(),
+                    kind=kind,   # "wire"
+                    width=width
+                )
+            )
+
 
     def _extract_instances(self, node, module):
 
@@ -481,8 +536,6 @@ class VerilogIRBuilder(IRBuilder):
             connections=connections
         )
 
-
-
     def _extract_param_override(self, node):
 
         if not node:
@@ -523,4 +576,3 @@ class VerilogIRBuilder(IRBuilder):
                 parameters[name_node.text.decode()] = value_node.text.decode()
 
         return parameters
-

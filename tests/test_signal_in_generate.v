@@ -21,6 +21,14 @@ module ModuleName
     reg [31:0] register1;
     wire [31:0] register2;
 
+    generate
+        if (NAME == 0) begin
+            reg sig_reg;
+            wire sig_wire;
+        end
+    endgenerate
+
+
 endmodule
 
 `resetall
