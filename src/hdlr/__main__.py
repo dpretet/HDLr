@@ -43,6 +43,33 @@ def main():
 
                     print(f"   └── {port.direction} {width_str}{port.name}")
 
+                for sig in m.signals:
+                    if sig.width:
+                        msb, lsb = sig.width
+                        width_str = f"[{msb}:{lsb}] "
+                    else:
+                        width_str = ""
+
+                    kind = sig.kind or ""
+                    print(f"   🔹 {kind} {width_str}{sig.name}")
+
+                # -----------------
+                # Instances
+                # -----------------
+                for inst in m.instances:
+                    print(f"   🔸 Instance {inst.name} : {inst.module_name}")
+
+                    if inst.parameters:
+                        print("      ⚙ Parameters:")
+                        for k, v in inst.parameters.items():
+                            print(f"         - {k} = {v}")
+
+                    if inst.connections:
+                        print("      🔌 Connections:")
+                        for port, expr in inst.connections.items():
+                            print(f"         - .{port}({expr})")
+
+
 
 if __name__ == "__main__":
     main()

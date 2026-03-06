@@ -9,4 +9,5 @@ from dataclasses import dataclass
 @dataclass
 class Signal:
     name: str
+    kind: str
     width: tuple[str, str] | None = None

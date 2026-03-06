@@ -10,6 +10,7 @@ from ...ir.module import Module
 from ...ir.port import Port
 from ...ir.signal import Signal
 from ...ir.parameter import Parameter
+from ...ir.instance import Instance
 
 
 class VerilogIRBuilder(IRBuilder):
@@ -38,6 +39,8 @@ class VerilogIRBuilder(IRBuilder):
         module = Module(name=name)
         self._extract_parameters(node, module)
         self._extract_ports(node, module)
+        self._extract_signals(node, module)
+        self._extract_instances(node, module)
 
         return module
 
@@ -116,6 +119,10 @@ class VerilogIRBuilder(IRBuilder):
             direction=direction,
             width=width
         )
+
+    # ---------------------------------------------------------
+    # Parameters (ANSI style)
+    # ---------------------------------------------------------
 
     def _extract_parameters(self, node, module):
 
@@ -251,4 +258,269 @@ class VerilogIRBuilder(IRBuilder):
 
         return (msb, lsb)
 
+
+    # ---------------------------------------------------------
+    # Internal Signals
+    # ---------------------------------------------------------
+
+# ---------------------------------------------------------
+# Internal Signals
+# ---------------------------------------------------------
+
+    def _extract_signals(self, node, module):
+
+        for item in node.children:
+
+            if item.type != "module_or_generate_item":
+                continue
+
+            # ✅ niveau intermédiaire que tu n'avais pas
+            pkg_decl = next(
+                (c for c in item.children
+                if c.type == "package_or_generate_item_declaration"),
+                None
+            )
+
+            if pkg_decl is None:
+                continue
+
+            data_decl = next(
+                (c for c in pkg_decl.children
+                if c.type == "data_declaration"),
+                None
+            )
+
+            if data_decl is None:
+                continue
+
+            self._handle_data_declaration(data_decl, module)
+
+
+    def _handle_data_declaration(self, node, module):
+
+        kind = None
+        width = None
+
+        # ✅ récupérer data_type_or_implicit1
+        dtype_wrapper = next(
+            (c for c in node.children if c.type.startswith("data_type_or_implicit")),
+            None
+        )
+
+        if dtype_wrapper:
+            data_type = next(
+                (c for c in dtype_wrapper.children if c.type == "data_type"),
+                None
+            )
+
+            if data_type:
+                # type (logic, reg, etc.)
+                base_type = next(
+                    (c for c in data_type.children
+                    if c.type in ("integer_vector_type", "net_type")),
+                    None
+                )
+
+                if base_type:
+                    kind = base_type.text.decode()
+
+                # width
+                packed_dim = next(
+                    (c for c in data_type.children
+                    if c.type == "packed_dimension"),
+                    None
+                )
+
+                if packed_dim:
+                    width = self._extract_range(packed_dim)
+
+        # ✅ variables
+        list_node = next(
+            (c for c in node.children
+            if c.type == "list_of_variable_decl_assignments"),
+            None
+        )
+
+        if list_node is None:
+            return
+
+        for var_decl in list_node.children:
+
+            if var_decl.type != "variable_decl_assignment":
+                continue
+
+            ident = next(
+                (c for c in var_decl.children
+                if c.type == "simple_identifier"),
+                None
+            )
+
+            if ident is None:
+                continue
+
+            module.signals.append(
+                Signal(
+                    name=ident.text.decode(),
+                    kind=kind,
+                    width=width
+                )
+            )
+
+    def _extract_instances(self, node, module):
+
+        for item in node.children:
+
+            if item.type != "module_or_generate_item":
+                continue
+
+            inst_node = next(
+                (c for c in item.children
+                if c.type == "module_instantiation"),
+                None
+            )
+
+            if inst_node:
+                self._handle_module_instantiation(inst_node, module)
+
+    def _handle_module_instantiation(self, node, module):
+
+        # -------------------------
+        # Module name
+        # -------------------------
+        module_name_node = next(
+            (c for c in node.children
+            if c.type == "simple_identifier"),
+            None
+        )
+
+        if not module_name_node:
+            return
+
+        module_name = module_name_node.text.decode()
+
+        # -------------------------
+        # Parameter override
+        # -------------------------
+        param_node = next(
+            (c for c in node.children
+            if c.type == "parameter_value_assignment"),
+            None
+        )
+
+        parameters = self._extract_param_override(param_node)
+
+        # -------------------------
+        # Instance (TON AST → hierarchical_instance)
+        # -------------------------
+        hier_node = next(
+            (c for c in node.children
+            if c.type == "hierarchical_instance"),
+            None
+        )
+
+        if not hier_node:
+            return
+
+        instance = self._build_instance_from_hier(
+            hier_node,
+            module_name,
+            parameters
+        )
+
+        if instance:
+            module.instances.append(instance)
+
+
+    def _build_instance_from_hier(self, node, module_name, parameters):
+
+        # Instance name
+        name_node = next(
+            (c for c in node.children
+            if c.type == "name_of_instance"),
+            None
+        )
+
+        if not name_node:
+            return None
+
+        instance_name = name_node.text.decode()
+
+        connections = {}
+
+        port_list = next(
+            (c for c in node.children
+            if c.type == "list_of_port_connections"),
+            None
+        )
+
+        if port_list:
+            for conn in port_list.children:
+
+                if conn.type != "named_port_connection":
+                    continue
+
+                port = next(
+                    (c for c in conn.children
+                    if c.type == "port_identifier"),
+                    None
+                )
+
+                expr = next(
+                    (c for c in conn.children
+                    if "expression" in c.type),
+                    None
+                )
+
+                if port and expr:
+                    connections[port.text.decode()] = expr.text.decode()
+
+        return Instance(
+            name=instance_name,
+            module_name=module_name,
+            parameters=parameters.copy(),
+            connections=connections
+        )
+
+
+
+    def _extract_param_override(self, node):
+
+        if not node:
+            return {}
+
+        parameters = {}
+
+        # Descend vers list_of_parameter_assignments
+        list_node = next(
+            (c for c in node.children
+            if c.type == "list_of_parameter_assignments"),
+            None
+        )
+
+        if not list_node:
+            return parameters
+
+        for child in list_node.children:
+
+            if child.type != "named_parameter_assignment":
+                continue
+
+            # Nom du parameter
+            name_node = next(
+                (c for c in child.children
+                if c.type == "parameter_identifier"),
+                None
+            )
+
+            # Valeur
+            value_node = next(
+                (c for c in child.children
+                if "expression" in c.type),
+                None
+            )
+
+            if name_node and value_node:
+                parameters[name_node.text.decode()] = value_node.text.decode()
+
+        return parameters
 
