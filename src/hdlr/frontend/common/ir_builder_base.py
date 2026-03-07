@@ -5,5 +5,5 @@
 # https://opensource.org/licenses/mit-license.php
 
 class IRBuilder:
-    def build(self, root):
+    def build(self, tree):
         raise NotImplementedError

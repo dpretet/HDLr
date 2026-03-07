@@ -14,6 +14,7 @@ from ...ir.instance import Instance
 
 
 class VerilogIRBuilder(IRBuilder):
+    """ Verilog Class to buidl the IR """
 
     # ---------------------------------------------------------
     # Entry
@@ -45,10 +46,8 @@ class VerilogIRBuilder(IRBuilder):
         return module
 
     def _extract_module_name(self, node):
-        header = next(
-            (c for c in node.children if c.type == "module_header"),
-            None
-        )
+
+        header = self._first(node, "module_header")
 
         if header is None:
             raise RuntimeError("module_header introuvable")
@@ -68,10 +67,8 @@ class VerilogIRBuilder(IRBuilder):
     # ---------------------------------------------------------
 
     def _extract_ports(self, node, module):
-        ansi_header = next(
-            (c for c in node.children if c.type == "module_ansi_header"),
-            None
-        )
+
+        ansi_header = self._first(node, "module_ansi_header")
 
         if ansi_header is None:
             return
@@ -126,10 +123,7 @@ class VerilogIRBuilder(IRBuilder):
 
     def _extract_parameters(self, node, module):
 
-        ansi_header = next(
-            (c for c in node.children if c.type == "module_ansi_header"),
-            None
-        )
+        ansi_header = self._first(node, "module_ansi_header")
 
         if ansi_header is None:
             return
@@ -270,7 +264,6 @@ class VerilogIRBuilder(IRBuilder):
             if item.type != "module_or_generate_item":
                 continue
 
-            # ⚠️ NE PAS utiliser next()
             for pkg_decl in item.children:
 
                 if pkg_decl.type != "package_or_generate_item_declaration":
@@ -428,13 +421,7 @@ class VerilogIRBuilder(IRBuilder):
             if item.type != "module_or_generate_item":
                 continue
 
-            inst_node = next(
-                (c for c in item.children
-                if c.type == "module_instantiation"),
-                None
-            )
-
-            if inst_node:
+            for inst_node in self._all(item, "module_instantiation"):
                 self._handle_module_instantiation(inst_node, module)
 
     def _handle_module_instantiation(self, node, module):
@@ -467,23 +454,15 @@ class VerilogIRBuilder(IRBuilder):
         # -------------------------
         # Instance (TON AST → hierarchical_instance)
         # -------------------------
-        hier_node = next(
-            (c for c in node.children
-            if c.type == "hierarchical_instance"),
-            None
-        )
 
-        if not hier_node:
-            return
-
-        instance = self._build_instance_from_hier(
-            hier_node,
-            module_name,
-            parameters
-        )
-
-        if instance:
-            module.instances.append(instance)
+        for hier_node in self._all(node, "hierarchical_instance"):
+            instance = self._build_instance_from_hier(
+                hier_node,
+                module_name,
+                parameters
+            )
+            if instance:
+                module.instances.append(instance)
 
 
     def _build_instance_from_hier(self, node, module_name, parameters):
@@ -576,3 +555,9 @@ class VerilogIRBuilder(IRBuilder):
                 parameters[name_node.text.decode()] = value_node.text.decode()
 
         return parameters
+
+    def _first(self, node, type_name):
+        return next((c for c in node.children if c.type == type_name), None)
+
+    def _all(self, node, type_name):
+        return [c for c in node.children if c.type == type_name]
