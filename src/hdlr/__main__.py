@@ -8,9 +8,15 @@
 HDLr main()
 """
 
-from hdlr.cli import build_parser
+from hdlr.core.cli import build_parser
 from hdlr.core.scanner import collect_files
 from hdlr.frontend import get_frontend
+
+def is_verilog(path: str):
+    return path.suffix == ".v"
+
+def is_systemverilog(path: str):
+    return path.suffix == ".sv"
 
 
 def main():
@@ -18,12 +24,18 @@ def main():
     args = parser.parse_args()
 
     if args.command == "scan":
+
         files = collect_files(args.inputs)
 
-        # ✅ langage configurable plus tard
-        frontend = get_frontend("verilog")
-
         for f in files:
+
+            if is_verilog(f):
+                frontend = get_frontend("verilog")
+            elif is_systemverilog(f):
+                frontend = get_frontend("systemverilog")
+            else:
+                continue
+
             print(f"\n📄 {f}")
 
             modules = frontend.parse_file(f)
