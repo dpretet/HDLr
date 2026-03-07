@@ -10,3 +10,9 @@ from dataclasses import dataclass
 class Parameter:
     name: str
     value: str
+
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name,
+            "value": self.value
+        }
