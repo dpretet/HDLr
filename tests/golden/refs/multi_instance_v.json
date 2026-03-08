@@ -1,0 +1,34 @@
+{
+  "multi_instance_v": {
+    "name": "multi_instance_v",
+    "parameters": {},
+    "ports": {
+      "a": { "direction": "input" },
+      "b": { "direction": "input" },
+      "y": { "direction": "output" }
+    },
+    "signals": {},
+    "instances": {
+      "u_sub1": {
+        "module": "submodule",
+        "parameters": {
+          "WIDTH": "8"
+        },
+        "connections": {
+          "clk": "clk",
+          "data": "data"
+        }
+      },
+      "u_sub2": {
+        "module": "submodule",
+        "parameters": {
+          "WIDTH": "8"
+        },
+        "connections": {
+          "clk": "clk",
+          "data": "data"
+        }
+      }
+    }
+  }
+}

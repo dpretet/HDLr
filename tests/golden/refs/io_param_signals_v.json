@@ -1,0 +1,28 @@
+{
+  "io_param_signals_v": {
+    "name": "io_param_signals_v",
+    "parameters": {
+      "NAME": { "name": "NAME", "value": "0" }
+    },
+    "ports": {
+      "aclk": { "direction": "input" },
+      "aresetn": { "direction": "input" },
+      "encoded0": { "direction": "output" },
+      "encoded1": {
+        "direction": "output",
+        "width": { "msb": "3", "lsb": "0" }
+      }    },
+    "signals": {
+      "register0": { "kind": "reg" },
+      "register1": {
+        "kind": "reg",
+        "width": { "msb": "31", "lsb": "0" }
+      },
+      "register2": {
+        "kind": "wire",
+        "width": { "msb": "31", "lsb": "0" }
+      }
+    },
+    "instances": {}
+  }
+}

@@ -68,9 +68,4 @@ def test_golden(name):
     })
     expected = json.loads(ref_file.read_text())
 
-    print("Results:")
-    print(result)
-    print("Expected:")
-    print(expected)
-
     assert result == expected
