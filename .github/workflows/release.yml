@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # -------------------------
+      # Build
+      # -------------------------
+      - name: Build (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          chmod +x flow.sh
+          ./flow.sh build
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          ./flow.sh build
+
+      # -------------------------
+      # Prepare artifact name
+      # -------------------------
+      - name: Prepare artifact name
+        id: prep
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            NAME="hdlr-${VERSION}-linux-x86_64"
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            NAME="hdlr-${VERSION}-macos-arm64"
+          else
+            NAME="hdlr-${VERSION}-windows-x86_64.exe"
+          fi
+          echo "ASSET_NAME=$NAME" >> $GITHUB_OUTPUT
+
+      # -------------------------
+      # Move binary
+      # -------------------------
+      - name: Move binary
+        shell: bash
+        run: |
+          mkdir -p dist
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp build/hdlr.exe dist/${{ steps.prep.outputs.ASSET_NAME }}
+          else
+            cp build/hdlr dist/${{ steps.prep.outputs.ASSET_NAME }}
+          fi
+
+      # -------------------------
+      # Upload to release
+      # -------------------------
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
