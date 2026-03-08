@@ -4,8 +4,7 @@
 `timescale 1 ns / 1 ps
 `default_nettype none
 
-
-module alu(input a, input b, output y);
+module input_output(input wire a, input logic b, output x, output logic y);
 endmodule
 
 `resetall

@@ -5,7 +5,7 @@
 `default_nettype none
 
 
-module alu(input a, input b, output y);
+module no_io_no_param_ansi;
 endmodule
 
 `resetall

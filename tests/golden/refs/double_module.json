@@ -1,0 +1,36 @@
+{
+    "alu": {
+        "name": "alu",
+        "parameters": {},
+        "ports": {
+            "a": {
+                "direction": "input"
+            },
+            "b": {
+                "direction": "input"
+            },
+            "c": {
+                "direction": "output"
+            }
+        },
+        "signals": {},
+        "instances": {}
+    },
+    "top": {
+        "name": "top",
+        "parameters": {},
+        "ports": {
+            "x": {
+                "direction": "input"
+            },
+            "y": {
+                "direction": "input"
+            },
+            "z": {
+                "direction": "output"
+            }
+        },
+        "signals": {},
+        "instances": {}
+    }
+}

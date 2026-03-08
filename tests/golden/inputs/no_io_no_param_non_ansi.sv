@@ -5,7 +5,7 @@
 `default_nettype none
 
 
-module top();
+module no_io_no_param_non_ansi();
 endmodule
 
 `resetall

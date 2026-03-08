@@ -5,15 +5,10 @@
 `default_nettype none
 
 
-module alu(input a, input b, output y);
+module alu(input a, input b, output c);
+endmodule
 
-submodule #(
-    .WIDTH(8)
-) u_sub (
-    .clk(clk),
-    .data(data)
-);
-
+module top(input x, input y, output z);
 endmodule
 
 `resetall

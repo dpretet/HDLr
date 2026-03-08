@@ -46,7 +46,7 @@ class SystemVerilogIRBuilder(IRBuilder):
         header = self._first(node, "module_ansi_header")
 
         if header is None:
-            raise RuntimeError("module_ansi_header introuvable")
+            header = self._first(node, "module_nonansi_header")
 
         name_node = next(
             (c for c in header.children if c.type == "simple_identifier"),
@@ -284,7 +284,6 @@ class SystemVerilogIRBuilder(IRBuilder):
 
     def _build_net_declaration(self, node, module):
 
-        print(node)
 
         width = self._find_packed_dimension(node)
 
@@ -305,7 +304,6 @@ class SystemVerilogIRBuilder(IRBuilder):
 
     def _build_data_declaration(self, node, module):
 
-        print(node)
         width = self._find_packed_dimension(node)
 
         for child in node.children:
@@ -346,11 +344,6 @@ class SystemVerilogIRBuilder(IRBuilder):
     def _handle_module_instantiation(self, node, module):
 
         param_node = self._first(node, "parameter_value_assignment")
-
-        print("PARAM NODE:", param_node)
-        print("PARAM CHILDREN:", [c.type for c in param_node.named_children])
-
-
 
         module_name_node = node.child_by_field_name("instance_type")
 
