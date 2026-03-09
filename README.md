@@ -9,19 +9,13 @@
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![Lint](https://img.shields.io/badge/lint-ruff-blueviolet)
 
-A HDL flow based on Tree-Sitter to explore a HDL hierarchy
+A flow based on Tree-Sitter to explore a HDL hierarchy
 
 # Install
 
-- Grab a ready-to-use binary in the repo
+- Grab a ready-to-use binary in the [repo](https://github.com/dpretet/HDLr/releases)
 
-- Install with your package manager like:
-
-```bash
-brew install hdlr
-```
-
-- Build with the Python flow
+- Build with the Python flow:
 
 ```bash
 python3 -venv venv
