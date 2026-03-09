@@ -61,9 +61,9 @@ jobs:
         run: |
           mkdir -p dist
           if [ "${{ runner.os }}" = "Windows" ]; then
-            cp build/hdlr.exe dist/${{ steps.prep.outputs.ASSET_NAME }}
+            cp dist/hdlr.exe dist/${{ steps.prep.outputs.ASSET_NAME }}
           else
-            cp build/hdlr dist/${{ steps.prep.outputs.ASSET_NAME }}
+            cp dist/hdlr dist/${{ steps.prep.outputs.ASSET_NAME }}
           fi
 
       # -------------------------

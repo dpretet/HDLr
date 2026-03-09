@@ -36,6 +36,14 @@ build_package() {
     echo "📦 Building package..."
     python -m build
 
+    echo "🔨 Building standalone executable..."
+    python -m pip install pyinstaller
+    pyinstaller \
+        --onefile \
+        --name hdlr \
+        --clean \
+        src/hdlr/__main__.py
+
     echo "✅ Build complete"
 }
 
