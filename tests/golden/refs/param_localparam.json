@@ -1,0 +1,13 @@
+{
+    "param_localparam": {
+        "name": "param_localparam",
+        "parameters": {
+            "NAME": { "name": "NAME", "value": "0" },
+            "WIDTH": { "name": "WIDTH", "value": "8" },
+            "DEPTH": { "name": "DEPTH", "value": "16" }
+        },
+        "ports": {},
+        "signals": {},
+        "instances": {}
+    }
+}

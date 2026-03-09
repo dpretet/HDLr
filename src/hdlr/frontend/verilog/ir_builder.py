@@ -123,62 +123,97 @@ class VerilogIRBuilder(IRBuilder):
 
     def _extract_parameters(self, node, module):
 
-        ansi_header = self._first(node, "module_ansi_header")
+        # -------------------------------------------------
+        # 1️⃣ Header (ANSI + non-ANSI)
+        # -------------------------------------------------
 
-        if ansi_header is None:
-            return
+        header_nodes = [
+            self._first(node, "module_ansi_header"),
+            self._first(node, "module_nonansi_header"),
+        ]
 
-        param_port_list = next(
-            (c for c in ansi_header.children if c.type == "parameter_port_list"),
+        for header in header_nodes:
+            if not header:
+                continue
+
+            param_port_list = next(
+                (c for c in header.children if c.type == "parameter_port_list"),
+                None
+            )
+
+            if not param_port_list:
+                continue
+
+            for param_port_decl in param_port_list.children:
+
+                param_decl = next(
+                    (c for c in param_port_decl.children
+                    if c.type == "parameter_declaration"),
+                    None
+                )
+
+                if param_decl:
+                    self._handle_parameter_declaration(param_decl, module)
+
+        # -------------------------------------------------
+        # 2️⃣ Body parameters
+        # -------------------------------------------------
+
+        for item in node.children:
+
+            if item.type != "module_or_generate_item":
+                continue
+
+            for pkg_decl in item.children:
+
+                if pkg_decl.type != "package_or_generate_item_declaration":
+                    continue
+
+                for child in pkg_decl.children:
+
+                    if child.type == "parameter_declaration":
+                        self._handle_parameter_declaration(child, module)
+
+    def _handle_parameter_declaration(self, node, module):
+
+        list_node = next(
+            (c for c in node.children
+            if c.type == "list_of_param_assignments"),
             None
         )
 
-        if param_port_list is None:
+        if not list_node:
             return
 
-        for param_port_decl in param_port_list.children:
-            if param_port_decl.type != "parameter_port_declaration":
+        for assignment in list_node.children:
+
+            if assignment.type != "param_assignment":
                 continue
 
-            param_decl = next(
-                (c for c in param_port_decl.children if c.type == "parameter_declaration"),
+            name_node = next(
+                (c for c in assignment.children
+                if c.type == "parameter_identifier"),
                 None
             )
 
-            if param_decl is None:
-                continue
-
-            list_node = next(
-                (c for c in param_decl.children if c.type == "list_of_param_assignments"),
+            value_node = next(
+                (c for c in assignment.children
+                if "expression" in c.type),
                 None
             )
 
-            if list_node is None:
+            if not name_node:
                 continue
 
-            for assignment in list_node.children:
-                if assignment.type != "param_assignment":
-                    continue
+            name = name_node.text.decode()
+            value = value_node.text.decode() if value_node else None
 
-                name_node = next(
-                    (c for c in assignment.children if c.type == "parameter_identifier"),
-                    None
+            module.parameters.append(
+                Parameter(
+                    name=name,
+                    value=value
                 )
-
-                value_node = next(
-                    (c for c in assignment.children if "expression" in c.type),
-                    None
-                )
-
-                if name_node is None or value_node is None:
-                    continue
-
-                module.parameters.append(
-                    Parameter(
-                        name=name_node.text.decode(),
-                        value=value_node.text.decode()
-                    )
-                )
+            )
 
 
     # ---------------------------------------------------------

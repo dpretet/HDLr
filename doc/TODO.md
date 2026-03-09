@@ -5,8 +5,8 @@
 - [X] Ajouter une testsuite
     - [X] Unit tests
     - [X] Golden tests
-- [ ] Support des parameters dans le body et les localparam
-- [ ] Support des generate et des instances et signaux dessous
+- [/] Support des parameters dans le body et les localparam
+- [ ] Support des generate et des instances et parameter signaux dessous
 - [ ] Support de signaux a deux dimensions
 - [ ] Support VHDL
 - [ ] Add packaging for Github release

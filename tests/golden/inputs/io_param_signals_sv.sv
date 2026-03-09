@@ -16,8 +16,6 @@ module io_param_signals_sv
     output logic [4-1:0] encoded2
     );
 
-    parameter ACLKK = 5;
-
     reg register0;
     reg [31:0] register1;
     logic [31:0] register2;

@@ -4,20 +4,15 @@
 `timescale 1 ns / 1 ps
 `default_nettype none
 
-module io_param_signals_v
+module param_localparam
 
     #(
     parameter NAME = 0
     )(
-    input  wire aclk,
-    input  wire aresetn,
-    output wire encoded0,
-    output wire [3:0] encoded1
     );
 
-    reg register0;
-    reg [31:0] register1;
-    wire [31:0] register2;
+    parameter WIDTH = 8;
+    parameter DEPTH = 16;
 
 endmodule
 

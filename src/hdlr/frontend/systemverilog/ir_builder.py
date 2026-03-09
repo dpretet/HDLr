@@ -134,62 +134,78 @@ class SystemVerilogIRBuilder(IRBuilder):
 
     def _extract_parameters(self, node, module):
 
-        ansi_header = self._first(node, "module_ansi_header")
+        # =========================================================
+        # 1️⃣ HEADER PARAMETERS (ANSI + NON ANSI)
+        # =========================================================
 
-        if ansi_header is None:
-            return
+        header = self._first(node, "module_ansi_header")
 
-        param_port_list = next(
-            (c for c in ansi_header.children if c.type == "parameter_port_list"),
-            None
-        )
+        if header is None:
+            header = self._first(node, "module_nonansi_header")
 
-        if param_port_list is None:
-            return
+        if header:
+            param_port_list = self._first(header, "parameter_port_list")
 
-        for param_port_decl in param_port_list.children:
-            if param_port_decl.type != "parameter_port_declaration":
-                continue
+            if param_port_list:
+                for param_port_decl in param_port_list.named_children:
 
-            param_decl = next(
-                (c for c in param_port_decl.children if c.type == "parameter_declaration"),
-                None
-            )
+                    if param_port_decl.type != "parameter_port_declaration":
+                        continue
 
-            if param_decl is None:
-                continue
-
-            list_node = next(
-                (c for c in param_decl.children if c.type == "list_of_param_assignments"),
-                None
-            )
-
-            if list_node is None:
-                continue
-
-            for assignment in list_node.children:
-                if assignment.type != "param_assignment":
-                    continue
-
-                name_node = next(
-                    (c for c in assignment.children if c.type == "simple_identifier"),
-                    None
-                )
-
-                value_node = next(
-                    (c for c in assignment.children if "expression" in c.type),
-                    None
-                )
-
-                if name_node is None or value_node is None:
-                    continue
-
-                module.parameters.append(
-                    Parameter(
-                        name=name_node.text.decode(),
-                        value=value_node.text.decode()
+                    param_decl = self._first(
+                        param_port_decl,
+                        "parameter_declaration"
                     )
+
+                    if param_decl:
+                        self._handle_parameter_declaration(param_decl, module)
+
+        # =========================================================
+        # 2️⃣ BODY PARAMETERS
+        # =========================================================
+
+        for item in node.named_children:
+
+            if item.type != "module_item":
+                continue
+
+            param_decl = self._first(item, "parameter_declaration")
+
+            if param_decl:
+                self._handle_parameter_declaration(param_decl, module)
+
+    def _handle_parameter_declaration(self, node, module):
+
+        list_node = self._first(node, "list_of_param_assignments")
+
+        if not list_node:
+            return
+
+        for assignment in list_node.named_children:
+
+            if assignment.type != "param_assignment":
+                continue
+
+            name_node = None
+            value_node = None
+
+            for child in assignment.named_children:
+
+                if child.type == "simple_identifier":
+                    name_node = child
+
+                elif "expression" in child.type:
+                    value_node = child
+
+            if not name_node:
+                continue
+
+            module.parameters.append(
+                Parameter(
+                    name=name_node.text.decode(),
+                    value=value_node.text.decode() if value_node else None
                 )
+            )
 
 
     # ---------------------------------------------------------
