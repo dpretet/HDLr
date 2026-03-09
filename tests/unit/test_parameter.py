@@ -9,14 +9,14 @@ from hdlr.ir.parameter import Parameter
 
 
 def test_parameter_basic():
-    p = Parameter(name="WIDTH", value="8")
+    p = Parameter(name="WIDTH", value_str="8")
 
     assert p.name == "WIDTH"
-    assert p.value == "8"
+    assert p.value_str == "8"
 
 
 def test_parameter_to_dict():
-    p = Parameter(name="DEPTH", value="256")
+    p = Parameter(name="DEPTH", value_str="256")
 
     assert p.to_dict() == {
         "name": "DEPTH",

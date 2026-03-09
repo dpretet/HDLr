@@ -18,7 +18,7 @@ def test_port_minimal():
 
     assert p.name == "clk"
     assert p.direction is None
-    assert p.width is None
+    assert p.width_str is None
 
 
 # ✅ Avec direction
@@ -27,15 +27,15 @@ def test_port_with_direction():
 
     assert p.name == "rst"
     assert p.direction == "input"
-    assert p.width is None
+    assert p.width_str is None
 
 
 # ✅ Avec width
 def test_port_with_width():
-    p = Port(name="data", width=("7", "0"))
+    p = Port(name="data", width_str=("7", "0"))
 
     assert p.name == "data"
-    assert p.width == ("7", "0")
+    assert p.width_str == ("7", "0")
 
 
 # ✅ to_dict sans rien
@@ -56,7 +56,7 @@ def test_port_to_dict_direction():
 
 # ✅ to_dict avec width
 def test_port_to_dict_width():
-    p = Port(name="data", width=("7", "0"))
+    p = Port(name="data", width_str=("7", "0"))
 
     assert p.to_dict() == {
         "width": {
@@ -68,7 +68,7 @@ def test_port_to_dict_width():
 
 # ✅ to_dict complet
 def test_port_to_dict_full():
-    p = Port(name="data", direction="output", width=("15", "8"))
+    p = Port(name="data", direction="output", width_str=("15", "8"))
 
     assert p.to_dict() == {
         "direction": "output",

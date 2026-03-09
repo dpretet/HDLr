@@ -114,7 +114,7 @@ class VerilogIRBuilder(IRBuilder):
         return Port(
             name=name,
             direction=direction,
-            width=width
+            width_str=width
         )
 
     # ---------------------------------------------------------
@@ -211,7 +211,7 @@ class VerilogIRBuilder(IRBuilder):
             module.parameters.append(
                 Parameter(
                     name=name,
-                    value=value
+                    value_str=value
                 )
             )
 
@@ -382,7 +382,7 @@ class VerilogIRBuilder(IRBuilder):
                 Signal(
                     name=ident.text.decode(),
                     kind=kind,
-                    width=width
+                    width_str=width
                 )
             )
 
@@ -444,7 +444,7 @@ class VerilogIRBuilder(IRBuilder):
                 Signal(
                     name=ident.text.decode(),
                     kind=kind,   # "wire"
-                    width=width
+                    width_str=width
                 )
             )
 

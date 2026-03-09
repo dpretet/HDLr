@@ -40,8 +40,8 @@ def test_module_with_parameters_sorted():
     m = Module(
         name="top",
         parameters=[
-            Parameter(name="WIDTH", value="8"),
-            Parameter(name="DEPTH", value="16"),
+            Parameter(name="WIDTH", value_str="8"),
+            Parameter(name="DEPTH", value_str="16"),
         ]
     )
 

@@ -10,7 +10,8 @@ from dataclasses import dataclass
 class Port:
     name: str
     direction: str | None = None
-    width: tuple[str, str] | None = None
+    width_str: tuple[str, str] | None = None
+    width_int: tuple[str, str] | None = None
 
     def to_dict(self) -> dict:
         data = {}
@@ -18,8 +19,15 @@ class Port:
         if self.direction is not None:
             data["direction"] = self.direction
 
-        if self.width is not None:
-            msb, lsb = self.width
+        if self.width_str is not None:
+            msb, lsb = self.width_str
+            data["width"] = {
+                "msb": msb,
+                "lsb": lsb
+            }
+
+        if self.width_int is not None:
+            msb, lsb = self.width_str
             data["width"] = {
                 "msb": msb,
                 "lsb": lsb

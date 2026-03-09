@@ -10,18 +10,25 @@ from dataclasses import dataclass
 class Signal:
     name: str
     kind: str
-    width: tuple[str, str] | None = None
+    width_str: tuple[str, str] | None = None
+    width_int: tuple[str, str] | None = None
 
     def to_dict(self) -> dict:
         data = {
             "kind": self.kind,
         }
 
-        if self.width is not None:
-            msb, lsb = self.width
+        if self.width_str is not None:
+            msb, lsb = self.width_str
             data["width"] = {
                 "msb": msb,
                 "lsb": lsb
             }
 
+        if self.width_int is not None:
+            msb, lsb = self.width_str
+            data["width"] = {
+                "msb": msb,
+                "lsb": lsb
+            }
         return data

@@ -125,7 +125,7 @@ class SystemVerilogIRBuilder(IRBuilder):
         return Port(
             name=name,
             direction=direction,
-            width=width
+            width_str=width
         )
 
     # ---------------------------------------------------------
@@ -203,7 +203,7 @@ class SystemVerilogIRBuilder(IRBuilder):
             module.parameters.append(
                 Parameter(
                     name=name_node.text.decode(),
-                    value=value_node.text.decode() if value_node else None
+                    value_str=value_node.text.decode() if value_node else None
                 )
             )
 
@@ -314,7 +314,7 @@ class SystemVerilogIRBuilder(IRBuilder):
                             Signal(
                                 name=name,
                                 kind="wire",
-                                width=width
+                                width_str=width
                             )
                         )
 
@@ -339,7 +339,7 @@ class SystemVerilogIRBuilder(IRBuilder):
                         Signal(
                             name=name,
                             kind="logic",   # tu peux raffiner plus tard
-                            width=width
+                            width_str=width
                         )
                     )
 

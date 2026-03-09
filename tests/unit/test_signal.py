@@ -13,15 +13,15 @@ def test_signal_basic():
 
     assert sig.name == "clk"
     assert sig.kind == "logic"
-    assert sig.width is None
+    assert sig.width_str is None
 
 
 def test_signal_with_width():
-    sig = Signal(name="data", kind="wire", width=("7", "0"))
+    sig = Signal(name="data", kind="wire", width_str=("7", "0"))
 
     assert sig.name == "data"
     assert sig.kind == "wire"
-    assert sig.width == ("7", "0")
+    assert sig.width_str == ("7", "0")
 
 
 def test_signal_to_dict_without_width():
@@ -35,7 +35,7 @@ def test_signal_to_dict_without_width():
 
 
 def test_signal_to_dict_with_width():
-    sig = Signal(name="data", kind="wire", width=("7", "0"))
+    sig = Signal(name="data", kind="wire", width_str=("7", "0"))
 
     d = sig.to_dict()
 

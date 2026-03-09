@@ -9,10 +9,17 @@ from dataclasses import dataclass
 @dataclass
 class Parameter:
     name: str
-    value: str
+    value_str: str | None = None
+    value_int: str | None = None
 
     def to_dict(self) -> dict:
-        return {
-            "name": self.name,
-            "value": self.value
-        }
+        if self.value_int is not None:
+            return {
+                "name": self.name,
+                "value": self.value_int
+            }
+        if self.value_str is not None:
+            return {
+                "name": self.name,
+                "value": self.value_str
+            }
