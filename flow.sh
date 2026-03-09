@@ -13,7 +13,14 @@ if [ ! -d "$VENV_DIR" ]; then
 fi
 
 echo "✅ Activating virtual environment..."
-source "$VENV_DIR/bin/activate"
+if [ -f "$VENV_DIR/bin/activate" ]; then
+    source "$VENV_DIR/bin/activate"
+elif [ -f "$VENV_DIR/Scripts/activate" ]; then
+    source "$VENV_DIR/Scripts/activate"
+else
+    echo "❌ Could not find virtualenv activation script"
+    exit 1
+fi
 
 # Upgrade pip quietly
 python -m pip install --upgrade pip >/dev/null
