@@ -166,13 +166,22 @@ class SystemVerilogIRBuilder(IRBuilder):
 
         for item in node.named_children:
 
-            if item.type != "module_item":
-                continue
+            # Handle module_item wrapped parameters (non-ANSI style)
+            if item.type == "module_item":
+                param_decl = self._first(item, "parameter_declaration")
+                if param_decl:
+                    self._handle_parameter_declaration(param_decl, module)
 
-            param_decl = self._first(item, "parameter_declaration")
+                localparam_decl = self._first(item, "local_parameter_declaration")
+                if localparam_decl:
+                    self._handle_parameter_declaration(localparam_decl, module)
 
-            if param_decl:
-                self._handle_parameter_declaration(param_decl, module)
+            # Handle direct parameter declarations (ANSI style)
+            elif item.type == "parameter_declaration":
+                self._handle_parameter_declaration(item, module)
+
+            elif item.type == "local_parameter_declaration":
+                self._handle_parameter_declaration(item, module)
 
     def _handle_parameter_declaration(self, node, module):
 

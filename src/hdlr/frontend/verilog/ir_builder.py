@@ -11,6 +11,7 @@ from ...ir.port import Port
 from ...ir.signal import Signal
 from ...ir.parameter import Parameter
 from ...ir.instance import Instance
+from ..debugging import ts_print
 
 
 class VerilogIRBuilder(IRBuilder):
@@ -172,6 +173,9 @@ class VerilogIRBuilder(IRBuilder):
                 for child in pkg_decl.children:
 
                     if child.type == "parameter_declaration":
+                        self._handle_parameter_declaration(child, module)
+                    
+                    elif child.type == "local_parameter_declaration":
                         self._handle_parameter_declaration(child, module)
 
     def _handle_parameter_declaration(self, node, module):

@@ -1,16 +1,18 @@
 # TODO Dev Plan
 
-- [X] Support parameters signals module instances
+- [X] Support parameters, signals, module, instances
 - [X] Support verilog
+- [X] Support systemverilog
 - [X] Ajouter une testsuite
     - [X] Unit tests
     - [X] Golden tests
 - [/] Support des parameters dans le body et les localparam
+    - deux sections ? body & header ? Voir comment resoudre les valeurs proprement
 - [ ] Support des generate et des instances et parameter signaux dessous
 - [ ] Support de signaux a deux dimensions
 - [ ] Support VHDL
-- [ ] Add packaging for Github release
-- [ ] Deploy in brew, apt, pypi ...
+- [X] Add packaging for Github release
+- [ ] Deploy in brew, pypi and CURL way
 - [ ] Add instance drop command
 - [ ] Extraire les horloges, reset et les assigner aux outputs et signaux
 - [ ] CDC and RDC analysis

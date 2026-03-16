@@ -1,0 +1,17 @@
+{
+    "param_localparam_ansi": {
+        "name": "param_localparam_ansi",
+        "parameters": {
+            "NAME": { "name": "NAME", "value": "0" },
+            "WIDE": { "name": "WIDE", "value": "4" },
+            "WIDTH": { "name": "WIDTH", "value": "8" },
+            "DEPTH": { "name": "DEPTH", "value": "16" }
+        },
+        "ports": {
+            "a": { "direction": "input" },
+            "b": { "direction": "output" }
+        },
+        "signals": {},
+        "instances": {}
+    }
+}

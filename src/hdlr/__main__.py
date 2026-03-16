@@ -8,9 +8,10 @@
 HDLr main()
 """
 
-from hdlr.core.cli import build_parser
+from hdlr.core.argparser import build_parser
 from hdlr.core.scanner import collect_files
 from hdlr.frontend import get_frontend
+from hdlr.ir.node import HierarchyBuilder, Design
 
 def is_verilog(path: str):
     return path.suffix == ".v"
@@ -24,63 +25,97 @@ def main():
     args = parser.parse_args()
 
     if args.command == "scan":
+        scan(args.inputs)
 
-        files = collect_files(args.inputs)
+    if args.command == "elaborate":
+        elaborate(args.inputs, args.top)
 
-        for f in files:
 
-            if is_verilog(f):
-                frontend = get_frontend("verilog")
-            elif is_systemverilog(f):
-                frontend = get_frontend("systemverilog")
-            else:
-                continue
+def scan(inputs):
 
-            print(f"\n📄 {f}")
+    files = collect_files(inputs)
+    all_modules = []
 
-            modules = frontend.parse_file(f)
+    for f in files:
 
-            for m in modules:
-                print(f"📦 Module: {m.name}")
+        if is_verilog(f):
+            frontend = get_frontend("verilog")
+        elif is_systemverilog(f):
+            frontend = get_frontend("systemverilog")
+        else:
+            continue
 
-                for p in m.parameters:
-                    print(f"   🔧 parameter {p.name} = {p.value}")
+        print(f"\n📄 Scanning {f}")
 
-                for port in m.ports:
-                    if port.width:
-                        msb, lsb = port.width
-                        width_str = f"[{msb}:{lsb}] "
-                    else:
-                        width_str = ""
+        modules = frontend.parse_file(f)
 
-                    print(f"   └── {port.direction} {width_str}{port.name}")
+        for m in modules:
+            all_modules.append(m)
+            pretty_print_module(m)
 
-                for sig in m.signals:
-                    if sig.width:
-                        msb, lsb = sig.width
-                        width_str = f"[{msb}:{lsb}] "
-                    else:
-                        width_str = ""
+    return all_modules
 
-                    kind = sig.kind or ""
-                    print(f"   🔹 {kind} {width_str}{sig.name}")
+def elaborate(inputs, top):
 
-                # -----------------
-                # Instances
-                # -----------------
-                for inst in m.instances:
-                    print(f"   🔸 Instance {inst.name} : {inst.module_name}")
+    design = Design()
+    all_modules = scan(inputs)
+    builder = HierarchyBuilder(design)
+    root = builder.build(top)
+    # print_tree(root)
 
-                    if inst.parameters:
-                        print("      ⚙ Parameters:")
-                        for k, v in inst.parameters.items():
-                            print(f"         - {k} = {v}")
 
-                    if inst.connections:
-                        print("      🔌 Connections:")
-                        for port, expr in inst.connections.items():
-                            print(f"         - .{port}({expr})")
+def pretty_print_module(m):
 
+    print(f"📦 Module: {m.name}")
+
+    for p in m.parameters:
+        print(f"   🔧 parameter {p.name} = {p.value_str}")
+
+    for port in m.ports:
+        if port.width_str:
+            msb, lsb = port.width_str
+            width_str = f"[{msb}:{lsb}] "
+        else:
+            width_str = ""
+
+        print(f"   └── {port.direction} {width_str}{port.name}")
+
+    for sig in m.signals:
+        if sig.width_str:
+            msb, lsb = sig.width_str
+            width_str = f"[{msb}:{lsb}] "
+        else:
+            width_str = ""
+
+        kind = sig.kind or ""
+        print(f"   🔹 {kind} {width_str}{sig.name}")
+
+    # -----------------
+    # Instances
+    # -----------------
+    for inst in m.instances:
+        print(f"   🔸 Instance {inst.name} : {inst.module_name}")
+
+        if inst.parameters:
+            print("      ⚙ Parameters:")
+            for k, v in inst.parameters.items():
+                print(f"         - {k} = {v}")
+
+        if inst.connections:
+            print("      🔌 Connections:")
+            for port, expr in inst.connections.items():
+                print(f"         - .{port}({expr})")
+
+def print_tree(node, indent=0):
+    pad = "  " * indent
+    inst = f" ({node.instance_name})" if node.instance_name else ""
+    print(f"{pad}- {node.module_name}{inst}")
+
+    for k, v in node.parameters.items():
+        print(f"{pad}    ⚙ {k} = {v}")
+
+    for child in node.children:
+        print_tree(child, indent + 1)
 
 
 if __name__ == "__main__":

@@ -21,4 +21,8 @@ def build_parser() -> argparse.ArgumentParser:
     scan = sub.add_parser("scan", help="Scan HDL files")
     scan.add_argument("inputs", nargs="+", help="Files or directories")
 
+    elaborate = sub.add_parser("elaborate", help="Scan HDL files")
+    elaborate.add_argument("inputs", nargs="+", help="Files or directories")
+    elaborate.add_argument("--top", required=True, help="Top module name")
+
     return parser

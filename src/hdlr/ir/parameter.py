@@ -10,7 +10,7 @@ from dataclasses import dataclass
 class Parameter:
     name: str
     value_str: str | None = None
-    value_int: str | None = None
+    value_int: int | None = None
 
     def to_dict(self) -> dict:
         if self.value_int is not None:

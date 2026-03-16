@@ -1,8 +1,9 @@
 {
-    "param_localparam": {
-        "name": "param_localparam",
+    "param_localparam_non_ansi": {
+        "name": "param_localparam_non_ansi",
         "parameters": {
             "NAME": { "name": "NAME", "value": "0" },
+            "WIDE": { "name": "WIDE", "value": "4" },
             "WIDTH": { "name": "WIDTH", "value": "8" },
             "DEPTH": { "name": "DEPTH", "value": "16" }
         },

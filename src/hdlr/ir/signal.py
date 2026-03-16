@@ -11,7 +11,7 @@ class Signal:
     name: str
     kind: str
     width_str: tuple[str, str] | None = None
-    width_int: tuple[str, str] | None = None
+    width_int: tuple[int, int] | None = None
 
     def to_dict(self) -> dict:
         data = {
@@ -26,7 +26,7 @@ class Signal:
             }
 
         if self.width_int is not None:
-            msb, lsb = self.width_str
+            msb, lsb = self.width_int
             data["width"] = {
                 "msb": msb,
                 "lsb": lsb
