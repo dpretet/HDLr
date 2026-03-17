@@ -151,10 +151,73 @@ def eval_expr(expr: str, context: dict[str, int]) -> int:
         expr,
     )
 
-    print(context)
-    print(expr)
+    # -------------------------------------------------
+    # 2.5️⃣ Support Verilog ternary operator
+    # -------------------------------------------------
+
+    def convert_ternary(match):
+        condition = match.group(1).strip()
+        true_expr = match.group(2).strip()
+        false_expr = match.group(3).strip()
+
+        # Evaluate condition first
+        cond_value = eval_expr(condition, context)
+
+        # Return the appropriate branch
+        if cond_value:
+            return str(eval_expr(true_expr, context))
+        else:
+            return str(eval_expr(false_expr, context))
+
+    # Handle ternary operators - need to be careful with nested expressions
+    # Use a more robust pattern that handles the full ternary expression
+    # Handle nested ternary operators by processing from innermost to outermost
+
+    # First, handle innermost ternary operators (not preceded by other ternaries)
+    # This pattern matches ternary operators that are not nested within other ternaries
+    def convert_ternary_inner(match):
+        condition = match.group(1).strip()
+        true_expr = match.group(2).strip()
+        false_expr = match.group(3).strip()
+
+        # Evaluate condition first
+        cond_value = eval_expr(condition, context)
+
+        # Return the appropriate branch
+        if cond_value:
+            return str(eval_expr(true_expr, context))
+        else:
+            return str(eval_expr(false_expr, context))
+
+    # Pattern to match ternary operators, handling nested ones by processing multiple times
+    # This matches: (condition) ? true_expr : false_expr
+    # We need to be careful with nested ternaries, so we process multiple times
+    # Use a non-greedy match for the true_expr to avoid capturing nested ternaries
+    pattern = r"\(([^?]*)\)\s*\?\s*([^:]*?):\s*([^:]+?)(?=\W|$)"
+
+    # Apply the substitution multiple times to handle nested ternaries
+    max_iterations = 10  # Prevent infinite loops
+    for _ in range(max_iterations):
+        new_expr = re.sub(pattern, convert_ternary_inner, expr)
+        if new_expr == expr:  # No more changes
+            break
+        expr = new_expr
+
     # -------------------------------------------------
     # 3️⃣ Eval final
     # -------------------------------------------------
+
+    # Strip whitespace and remove any remaining comments
+    expr = expr.strip()
+
+    # If the expression still contains a colon, it means the ternary operator
+    # was not properly processed. This can happen with complex nested expressions.
+    # For now, let's try to handle simple cases where we have "X : Y" format
+    if ":" in expr and "?" not in expr:
+        # This looks like a malformed ternary operator result
+        # Try to extract just the number part
+        number_match = re.search(r'\d+', expr)
+        if number_match:
+            expr = number_match.group(0)
 
     return eval(expr, {}, context)

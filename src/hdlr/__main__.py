@@ -11,7 +11,8 @@ HDLr main()
 from hdlr.core.argparser import build_parser
 from hdlr.core.scanner import collect_files
 from hdlr.frontend import get_frontend
-from hdlr.ir.node import HierarchyBuilder, Design
+from hdlr.core.design import Design
+from hdlr.ir.node import HierarchyBuilder
 
 def is_verilog(path: str):
     return path.suffix == ".v"
@@ -59,9 +60,14 @@ def elaborate(inputs, top):
 
     design = Design()
     all_modules = scan(inputs)
+    
+    # Add all modules to the design
+    for module in all_modules:
+        design.add_module(module)
+    
     builder = HierarchyBuilder(design)
     root = builder.build(top)
-    # print_tree(root)
+    print_tree(root)
 
 
 def pretty_print_module(m):
