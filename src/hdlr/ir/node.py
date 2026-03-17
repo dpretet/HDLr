@@ -61,10 +61,17 @@ class HierarchyBuilder:
                     local_params
                 )
 
+        # Store only the parameters that are specific to this module
+        # (not inherited from parent contexts)
+        module_specific_params = {}
+        for param in module.parameters:
+            if param.name in local_params:
+                module_specific_params[param.name] = local_params[param.name]
+        
         node = Node(
             module_name=module.name,
             instance_name=instance_name,
-            parameters=dict(local_params),
+            parameters=dict(module_specific_params),
         )
 
         # 🔹 2. Elaborer les instances enfants

@@ -60,11 +60,11 @@ def elaborate(inputs, top):
 
     design = Design()
     all_modules = scan(inputs)
-    
+
     # Add all modules to the design
     for module in all_modules:
         design.add_module(module)
-    
+
     builder = HierarchyBuilder(design)
     root = builder.build(top)
     print_tree(root)
