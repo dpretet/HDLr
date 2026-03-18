@@ -11,8 +11,8 @@ HDLr main()
 from hdlr.core.argparser import build_parser
 from hdlr.core.scanner import collect_files
 from hdlr.frontend import get_frontend
-from hdlr.core.design import Design
 from hdlr.ir.node import HierarchyBuilder
+from hdlr.ir.node import Design
 
 def is_verilog(path: str):
     return path.suffix == ".v"
@@ -26,7 +26,8 @@ def main():
     args = parser.parse_args()
 
     if args.command == "scan":
-        scan(args.inputs)
+        for m in scan(args.inputs):
+            pretty_print_module(m)
 
     if args.command == "elaborate":
         elaborate(args.inputs, args.top)
@@ -52,7 +53,6 @@ def scan(inputs):
 
         for m in modules:
             all_modules.append(m)
-            pretty_print_module(m)
 
     return all_modules
 

@@ -15,18 +15,21 @@ class Node:
     parameters: dict[str, int]
     children: list["HierarchyNode"] = field(default_factory=list)
 
+@dataclass
 class Design:
-    def __init__(self):
-        self.modules = {}
+    modules = {}
 
     def add_module(self, module):
+        if module.name in self.modules:
+            raise ValueError(f"Duplicate module {module.name}")
         self.modules[module.name] = module
 
+    def get(self, name):
+        return self.modules.get(name)
 
+@dataclass
 class HierarchyBuilder:
-
-    def __init__(self, design):
-        self.design = design
+    design: Design
 
     def build(self, top_name: str) -> Node:
 

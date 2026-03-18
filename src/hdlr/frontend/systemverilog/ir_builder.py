@@ -11,6 +11,7 @@ from ...ir.port import Port
 from ...ir.signal import Signal
 from ...ir.parameter import Parameter
 from ...ir.instance import Instance
+from ..common.debugging import ts_print
 
 
 class SystemVerilogIRBuilder(IRBuilder):
@@ -480,17 +481,3 @@ class SystemVerilogIRBuilder(IRBuilder):
                 params[name] = value
 
         return params
-
-
-
-    def _first(self, node, type_name):
-        return next(
-            (c for c in node.named_children if c.type == type_name),
-            None
-        )
-
-    def _all(self, node, type_name):
-        return [
-            c for c in node.named_children
-            if c.type == type_name
-        ]

@@ -4,10 +4,13 @@
 # distributed under the mit license
 # https://opensource.org/licenses/mit-license.php
 
+from dataclasses import dataclass
+from typing import List, Optional, Any
+
+
 class ASTNode:
-    def __init__(self, node, source: bytes):
-        self.node = node
-        self.source = source
+    node: Any
+    source: bytes
 
     @property
     def type(self):
