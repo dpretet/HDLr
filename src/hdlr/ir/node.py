@@ -4,35 +4,86 @@
 # distributed under the mit license
 # https://opensource.org/licenses/mit-license.php
 
+"""
+Hierarchy and parameter resolution module for HDLr.
+
+This module provides the core functionality for building design hierarchies
+and resolving parameter expressions in SystemVerilog/Verilog designs.
+"""
+
 from dataclasses import dataclass, field
 import re
 import math
 
+
 @dataclass
 class Node:
+    """Represents a node in the design hierarchy.
+    
+    Attributes:
+        module_name: Name of the module
+        instance_name: Name of the instance (None for top module)
+        parameters: Dictionary of resolved parameter values
+        children: List of child nodes in the hierarchy
+    """
     module_name: str
     instance_name: str | None
     parameters: dict[str, int]
     children: list["HierarchyNode"] = field(default_factory=list)
 
+
 @dataclass
 class Design:
-    modules = {}
+    """Container for all modules in a design.
+    
+    Attributes:
+        modules: Dictionary mapping module names to module objects
+    """
+    modules: dict = field(default_factory=dict)
 
     def add_module(self, module):
+        """Add a module to the design.
+        
+        Args:
+            module: Module object to add
+            
+        Raises:
+            ValueError: If a module with the same name already exists
+        """
         if module.name in self.modules:
             raise ValueError(f"Duplicate module {module.name}")
         self.modules[module.name] = module
 
     def get(self, name):
+        """Get a module by name.
+        
+        Args:
+            name: Name of the module to retrieve
+            
+        Returns:
+            The module object, or None if not found
+        """
         return self.modules.get(name)
+
 
 @dataclass
 class HierarchyBuilder:
+    """Builds design hierarchies with resolved parameters.
+    
+    Attributes:
+        design: Design object containing all modules
+    """
     design: Design
 
     def build(self, top_name: str) -> Node:
-
+        """Build hierarchy starting from a top module.
+        
+        Args:
+            top_name: Name of the top module
+            
+        Returns:
+            Root node of the hierarchy
+        """
         print("Available modules:")
         for name in self.design.modules:
             print(" -", name)
@@ -49,12 +100,20 @@ class HierarchyBuilder:
         instance_name: str | None,
         parent_params: dict[str, int],
     ) -> Node:
-
-        # 🔹 1. Résoudre paramètres locaux
+        """Recursively elaborate a module and its children.
+        
+        Args:
+            module: Module object to elaborate
+            instance_name: Name of this instance (None for top)
+            parent_params: Parameters inherited from parent context
+            
+        Returns:
+            Elaborated node with resolved parameters and children
+        """
+        # Step 1: Resolve local parameters
         local_params = parent_params.copy()
 
         for param in module.parameters:
-
             if param.value_int is not None:
                 local_params[param.name] = int(param.value_int)
 
@@ -64,8 +123,7 @@ class HierarchyBuilder:
                     local_params
                 )
 
-        # Store only the parameters that are specific to this module
-        # (not inherited from parent contexts)
+        # Store only module-specific parameters (not inherited ones)
         module_specific_params = {}
         for param in module.parameters:
             if param.name in local_params:
@@ -77,17 +135,15 @@ class HierarchyBuilder:
             parameters=dict(module_specific_params),
         )
 
-        # 🔹 2. Elaborer les instances enfants
+        # Step 2: Elaborate child instances
         for inst in module.instances:
-
             child_module = self.design.modules[inst.module_name]
 
-            # 1️⃣ contexte = paramètres parent
+            # 1. Start with parent context
             child_params = dict(local_params)
 
-            # 2️⃣ résoudre paramètres par défaut du module enfant
+            # 2. Resolve child module's default parameters
             for param in child_module.parameters:
-
                 if param.value_int is not None:
                     child_params[param.name] = int(param.value_int)
 
@@ -97,11 +153,11 @@ class HierarchyBuilder:
                         child_params
                     )
 
-            # 3️⃣ appliquer overrides après
+            # 3. Apply parameter overrides from instance
             for name, expr in inst.parameters.items():
                 child_params[name] = eval_expr(expr, child_params)
 
-            # 4️⃣ élaborer récursivement
+            # 4. Recursively elaborate child
             child_node = self._elaborate(
                 module=child_module,
                 instance_name=inst.name,
@@ -110,16 +166,29 @@ class HierarchyBuilder:
 
             node.children.append(child_node)
 
-
         return node
 
 
 def eval_expr(expr: str, context: dict[str, int]) -> int:
-
-    # -------------------------------------------------
-    # 1️⃣ Convertir nombres Verilog
-    # -------------------------------------------------
-
+    """Evaluate a SystemVerilog parameter expression.
+    
+    Supports:
+    - Verilog number formats (e.g., 8'hFF, 16'd42)
+    - $clog2 function
+    - Ternary operators (condition ? true : false)
+    - Basic arithmetic expressions
+    
+    Args:
+        expr: Expression string to evaluate
+        context: Dictionary of available variables/parameters
+        
+    Returns:
+        Evaluated integer result
+        
+    Raises:
+        ValueError: If expression contains invalid $clog2 argument
+    """
+    # Step 1: Convert Verilog number formats
     def convert_verilog_number(match):
         width = match.group(1)
         base = match.group(2).lower()
@@ -142,10 +211,7 @@ def eval_expr(expr: str, context: dict[str, int]) -> int:
         expr,
     )
 
-    # -------------------------------------------------
-    # 2️⃣ Support $clog2
-    # -------------------------------------------------
-
+    # Step 2: Support $clog2 function
     def convert_clog2(match):
         inner_expr = match.group(1)
         value = eval_expr(inner_expr, context)
@@ -161,51 +227,24 @@ def eval_expr(expr: str, context: dict[str, int]) -> int:
         expr,
     )
 
-    # -------------------------------------------------
-    # 2.5️⃣ Support Verilog ternary operator
-    # -------------------------------------------------
-
-    def convert_ternary(match):
-        condition = match.group(1).strip()
-        true_expr = match.group(2).strip()
-        false_expr = match.group(3).strip()
-
-        # Evaluate condition first
-        cond_value = eval_expr(condition, context)
-
-        # Return the appropriate branch
-        if cond_value:
-            return str(eval_expr(true_expr, context))
-        else:
-            return str(eval_expr(false_expr, context))
-
-    # Handle ternary operators - need to be careful with nested expressions
-    # Use a more robust pattern that handles the full ternary expression
-    # Handle nested ternary operators by processing from innermost to outermost
-
-    # First, handle innermost ternary operators (not preceded by other ternaries)
-    # This pattern matches ternary operators that are not nested within other ternaries
+    # Step 2.5: Support Verilog ternary operators
     def convert_ternary_inner(match):
         condition = match.group(1).strip()
         true_expr = match.group(2).strip()
         false_expr = match.group(3).strip()
-
+        
         # Evaluate condition first
         cond_value = eval_expr(condition, context)
-
+        
         # Return the appropriate branch
         if cond_value:
             return str(eval_expr(true_expr, context))
         else:
             return str(eval_expr(false_expr, context))
 
-    # Pattern to match ternary operators, handling nested ones by processing multiple times
-    # This matches: (condition) ? true_expr : false_expr
-    # We need to be careful with nested ternaries, so we process multiple times
-    # Use a non-greedy match for the true_expr to avoid capturing nested ternaries
+    # Handle nested ternary operators by processing multiple times
     pattern = r"\(([^?]*)\)\s*\?\s*([^:]*?):\s*([^:]+?)(?=\W|$)"
-
-    # Apply the substitution multiple times to handle nested ternaries
+    
     max_iterations = 10  # Prevent infinite loops
     for _ in range(max_iterations):
         new_expr = re.sub(pattern, convert_ternary_inner, expr)
@@ -213,19 +252,11 @@ def eval_expr(expr: str, context: dict[str, int]) -> int:
             break
         expr = new_expr
 
-    # -------------------------------------------------
-    # 3️⃣ Eval final
-    # -------------------------------------------------
-
-    # Strip whitespace and remove any remaining comments
+    # Step 3: Final evaluation
     expr = expr.strip()
-
-    # If the expression still contains a colon, it means the ternary operator
-    # was not properly processed. This can happen with complex nested expressions.
-    # For now, let's try to handle simple cases where we have "X : Y" format
+    
+    # Handle malformed ternary operator results
     if ":" in expr and "?" not in expr:
-        # This looks like a malformed ternary operator result
-        # Try to extract just the number part
         number_match = re.search(r'\d+', expr)
         if number_match:
             expr = number_match.group(0)

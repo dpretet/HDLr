@@ -5,7 +5,11 @@
 # https://opensource.org/licenses/mit-license.php
 
 """
-HDLr main()
+HDLr main module - Hardware Design Language parser and elaborator.
+
+This module provides the main entry point for the HDLr tool, which can:
+- Scan SystemVerilog/Verilog files to extract module definitions
+- Elaborate designs by building module hierarchies with resolved parameters
 """
 
 from hdlr.core.argparser import build_parser
@@ -14,14 +18,36 @@ from hdlr.frontend import get_frontend
 from hdlr.ir.node import HierarchyBuilder
 from hdlr.ir.node import Design
 
-def is_verilog(path: str):
+
+def is_verilog(path: str) -> bool:
+    """Check if a file path has a Verilog (.v) extension.
+    
+    Args:
+        path: Path object to check
+        
+    Returns:
+        True if the path has a .v extension, False otherwise
+    """
     return path.suffix == ".v"
 
-def is_systemverilog(path: str):
+
+def is_systemverilog(path: str) -> bool:
+    """Check if a file path has a SystemVerilog (.sv) extension.
+    
+    Args:
+        path: Path object to check
+        
+    Returns:
+        True if the path has a .sv extension, False otherwise
+    """
     return path.suffix == ".sv"
 
 
 def main():
+    """Main entry point for HDLr tool.
+    
+    Parses command line arguments and dispatches to appropriate function.
+    """
     parser = build_parser()
     args = parser.parse_args()
 
@@ -34,12 +60,18 @@ def main():
 
 
 def scan(inputs):
-
+    """Scan input files and extract module definitions.
+    
+    Args:
+        inputs: List of file/directory paths to scan
+        
+    Returns:
+        List of Module objects extracted from the input files
+    """
     files = collect_files(inputs)
     all_modules = []
 
     for f in files:
-
         if is_verilog(f):
             frontend = get_frontend("verilog")
         elif is_systemverilog(f):
@@ -56,8 +88,14 @@ def scan(inputs):
 
     return all_modules
 
-def elaborate(inputs, top):
 
+def elaborate(inputs, top):
+    """Elaborate a design hierarchy starting from a top module.
+    
+    Args:
+        inputs: List of file/directory paths containing the design
+        top: Name of the top module to elaborate
+    """
     design = Design()
     all_modules = scan(inputs)
 
@@ -71,7 +109,11 @@ def elaborate(inputs, top):
 
 
 def pretty_print_module(m):
-
+    """Pretty print a module's structure including parameters, ports, signals, and instances.
+    
+    Args:
+        m: Module object to print
+    """
     print(f"📦 Module: {m.name}")
 
     for p in m.parameters:
@@ -96,9 +138,7 @@ def pretty_print_module(m):
         kind = sig.kind or ""
         print(f"   🔹 {kind} {width_str}{sig.name}")
 
-    # -----------------
     # Instances
-    # -----------------
     for inst in m.instances:
         print(f"   🔸 Instance {inst.name} : {inst.module_name}")
 
@@ -112,7 +152,14 @@ def pretty_print_module(m):
             for port, expr in inst.connections.items():
                 print(f"         - .{port}({expr})")
 
+
 def print_tree(node, indent=0):
+    """Print the design hierarchy tree.
+    
+    Args:
+        node: Current node in the hierarchy
+        indent: Current indentation level
+    """
     pad = "  " * indent
     inst = f" ({node.instance_name})" if node.instance_name else ""
     print(f"{pad}- {node.module_name}{inst}")

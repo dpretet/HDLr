@@ -5,15 +5,24 @@
 # https://opensource.org/licenses/mit-license.php
 
 """
-File / Dir Scanner
+File and directory scanner for HDL source files.
+
+This module provides functionality to recursively scan directories
+and collect SystemVerilog/Verilog files for processing.
 """
 
 from pathlib import Path
 
 
 def collect_files(inputs):
-    """ Gather the files to scan """
-
+    """Collect SystemVerilog and Verilog files from input paths.
+    
+    Args:
+        inputs: List of file/directory paths to scan
+        
+    Returns:
+        List of Path objects for all found .v and .sv files
+    """
     files = []
 
     for item in inputs:
