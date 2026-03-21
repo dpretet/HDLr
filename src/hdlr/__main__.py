@@ -268,7 +268,10 @@ def _add_to_tree(parent_tree, node, design):
     if node.parameters:
         param_tree = node_tree.add("⚙ Parameters")
         for k, v in node.parameters.items():
-            param_tree.add(f"[cyan]{k}[/cyan] = [magenta]{hex(v)}[/magenta]")
+            if isinstance(v, int):
+                param_tree.add(f"[cyan]{k}[/cyan] = [magenta]{hex(v)}[/magenta]")
+            else:
+                param_tree.add(f"[cyan]{k}[/cyan] = [magenta]{v}[/magenta]")
 
     if module and module.ports:
         io_tree = node_tree.add("🔌 I/O Ports")

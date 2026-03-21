@@ -286,8 +286,16 @@ def eval_expr(expr: str, context: dict[str, int]) -> int:
             break
         expr = new_expr
 
-    # Step 3: Final evaluation
+    # Step 3: Clean up comments and final evaluation
     expr = expr.strip()
+    
+    # Remove C-style comments /* ... */
+    expr = re.sub(r'/\*.*?\*/', '', expr)
+    # Remove C++ style comments // ...
+    expr = re.sub(r'//.*$', '', expr)
+    
+    # Clean up multiple spaces
+    expr = re.sub(r'\s+', ' ', expr).strip()
     
     # Handle malformed ternary operator results
     if ":" in expr and "?" not in expr:
