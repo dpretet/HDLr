@@ -114,21 +114,23 @@ class HierarchyBuilder:
         local_params = parent_params.copy()
 
         for param in module.parameters:
-            if param.value_int is not None:
-                local_params[param.name] = int(param.value_int)
+            # Only resolve parameter if it hasn't been overridden by parent instance
+            if param.name not in local_params:
+                if param.value_int is not None:
+                    local_params[param.name] = int(param.value_int)
 
-            elif param.value_str is not None:
-                local_params[param.name] = eval_expr(
-                    param.value_str,
-                    local_params
-                )
+                elif param.value_str is not None:
+                    local_params[param.name] = eval_expr(
+                        param.value_str,
+                        local_params
+                    )
 
         # Store only module-specific parameters (not inherited ones)
         module_specific_params = {}
         for param in module.parameters:
             if param.name in local_params:
                 module_specific_params[param.name] = local_params[param.name]
-        
+
         node = Node(
             module_name=module.name,
             instance_name=instance_name,
@@ -154,10 +156,21 @@ class HierarchyBuilder:
                     )
 
             # 3. Apply parameter overrides from instance
+            overridden_params = set()
             for name, expr in inst.parameters.items():
                 child_params[name] = eval_expr(expr, child_params)
+                overridden_params.add(name)
 
-            # 4. Recursively elaborate child
+            # 4. Re-evaluate dependent parameters
+            # Parameters that depend on overridden parameters need to be re-evaluated
+            for param in child_module.parameters:
+                if (param.name not in overridden_params and 
+                    param.value_str is not None and 
+                    any(override in param.value_str for override in overridden_params)):
+                    # This parameter depends on an overridden parameter, re-evaluate it
+                    child_params[param.name] = eval_expr(param.value_str, child_params)
+
+            # 5. Recursively elaborate child
             child_node = self._elaborate(
                 module=child_module,
                 instance_name=inst.name,

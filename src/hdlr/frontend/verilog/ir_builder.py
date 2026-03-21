@@ -11,7 +11,7 @@ from ...ir.port import Port
 from ...ir.signal import Signal
 from ...ir.parameter import Parameter
 from ...ir.instance import Instance
-from ..common.debugging import ts_print
+# from ..common.debugging import ts_print
 
 
 class VerilogIRBuilder(IRBuilder):
