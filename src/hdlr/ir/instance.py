@@ -12,6 +12,7 @@ class Instance:
     module_name: str
     parameters: dict[str, str] = field(default_factory=dict)
     connections: dict[str, str] = field(default_factory=dict)
+    condition: str | None = None  # Condition for generate blocks
 
     def to_dict(self) -> dict:
         data = {

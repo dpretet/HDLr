@@ -302,17 +302,22 @@ class SystemVerilogIRBuilder(IRBuilder):
             # -------------------------
 
             if item.type == "data_declaration":
-                self._build_data_declaration(item, module)
+                signals = self._build_data_declaration(item, module)
+                module.signals.extend(signals)
 
             elif item.type == "net_declaration":
-                self._build_net_declaration(item, module)
+                signals = self._build_net_declaration(item, module)
+                module.signals.extend(signals)
 
+            # TODO: Move to build()
+            elif item.type == "generate_region":
+                self._extract_from_generate_blocks(item, module)
 
-    def _build_net_declaration(self, node, module):
-
+    def _build_net_declaration(self, node, module, condition=None):
 
         width = self._find_packed_dimension(node)
 
+        signals = []
         for child in node.children:
             if child.type == "list_of_net_identifiers":
                 for ident in child.named_children:
@@ -320,19 +325,22 @@ class SystemVerilogIRBuilder(IRBuilder):
                     if ident.type == "net_identifier":
                         name = ident.text.decode()
 
-                        module.signals.append(
-                            Signal(
-                                name=name,
-                                kind="wire",
-                                width_str=width
-                            )
+                        signal = Signal(
+                            name=name,
+                            kind="wire",
+                            width_str=width,
+                            condition=condition
                         )
+                        signals.append(signal)
 
-    def _build_data_declaration(self, node, module):
+        return signals
+
+    def _build_data_declaration(self, node, module, condition=None):
 
         width = self._find_packed_dimension(node)
 
-        for child in node.children:
+        signals = []
+        for child in node.named_children:
             if child.type == "list_of_variable_decl_assignments":
                 for var in child.named_children:
                     if var.type != "variable_decl_assignment":
@@ -345,13 +353,94 @@ class SystemVerilogIRBuilder(IRBuilder):
 
                     name = name_node.text.decode()
 
-                    module.signals.append(
-                        Signal(
-                            name=name,
-                            kind="logic",   # tu peux raffiner plus tard
-                            width_str=width
-                        )
+                    signal = Signal(
+                        name=name,
+                        kind="logic",   # tu peux raffiner plus tard
+                        width_str=width,
+                        condition=condition
                     )
+                    signals.append(signal)
+
+        return signals
+
+
+    # ---------------------------------------------------------
+    # Generate block
+    # ---------------------------------------------------------
+
+    def _extract_from_generate_blocks(self, node, module):
+        """Extract signals, parameters, and instances from generate blocks."""
+        for item in node.named_children:
+            if item.type == "loop_generate_construct":
+                self._process_loop_generate(item, module)
+            elif item.type == "conditional_generate_construct":
+                self._process_conditional_generate(item, module)
+
+    def _process_loop_generate(self, node, module):
+        """Process loop generate constructs."""
+        # Extract loop condition (e.g., "i < DEPTH")
+        condition = self._extract_loop_condition(node)
+
+        # Process each generate block in the loop
+        # For loop generate, generate_block is a direct child
+        for block in node.named_children:
+            if block.type == "generate_block":
+                self._extract_signals_from_block(block, module, condition)
+                self._extract_instances_from_block(block, module, condition)
+
+    def _process_conditional_generate(self, node, module):
+        """Process conditional generate constructs."""
+        # Extract the if condition (e.g., "WIDTH > 8")
+        condition = self._extract_if_condition(node)
+
+        for block in self._all(node, "generate_block"):
+            self._extract_signals_from_block(block, module, condition)
+            self._extract_instances_from_block(block, module, condition)
+
+    def _extract_signals_from_block(self, block, module, condition):
+        """Extract signals from a generate block with condition."""
+        for item in block.named_children:
+            if item.type == "data_declaration":
+                signals = self._build_data_declaration(item, module, condition)
+                module.signals.extend(signals)
+            elif item.type == "net_declaration":
+                signals = self._build_net_declaration(item, module, condition)
+                module.signals.extend(signals)
+
+    def _extract_instances_from_block(self, block, module, condition):
+        """Extract instances from a generate block with condition."""
+        for item in block.named_children:
+            if item.type == "module_instantiation":
+                self._handle_module_instantiation(item, module, condition)
+
+    def _extract_loop_condition(self, node):
+        """Extract the loop condition from a loop generate construct."""
+        # Look for constant_expression nodes that contain comparison operators
+        for child in node.named_children:
+            if child.type == "constant_expression":
+                # Check if this looks like a comparison (contains operators)
+                text = child.text.decode()
+                if any(op in text for op in ['<', '>', '==', '!=', '<=', '>=']):
+                    return text
+            elif child.type == "generate_loop_statement":
+                # Also check inside generate_loop_statement
+                for subchild in child.named_children:
+                    if subchild.type == "constant_expression":
+                        text = subchild.text.decode()
+                        if any(op in text for op in ['<', '>', '==', '!=', '<=', '>=']):
+                            return text
+        return None
+
+    def _extract_if_condition(self, node):
+        """Extract the if condition from a conditional generate construct."""
+        # Find the condition expression
+        if_construct = self._first(node, "if_generate_construct")
+        if if_construct:
+            for child in if_construct.named_children:
+                if child.type in ("generate_conditional_expression", "constant_expression"):
+                    return child.text.decode()
+        return None
+
 
 
     # ---------------------------------------------------------
@@ -360,14 +449,41 @@ class SystemVerilogIRBuilder(IRBuilder):
 
     def _extract_instances(self, node, module):
 
-
         for item in node.named_children:
 
             if item.type == "module_instantiation":
                 self._handle_module_instantiation(item, module)
 
+            # 🆕 Handle generate blocks for instances
+            elif item.type == "generate_region":
+                self._extract_instances_from_generate(item, module)
 
-    def _handle_module_instantiation(self, node, module):
+    def _extract_instances_from_generate(self, node, module):
+        """Extract instances from generate blocks."""
+        for item in node.named_children:
+            if item.type == "loop_generate_construct":
+                self._process_loop_generate_instances(item, module)
+            elif item.type == "conditional_generate_construct":
+                self._process_conditional_generate_instances(item, module)
+
+    def _process_loop_generate_instances(self, node, module):
+        """Process loop generate constructs for instances."""
+        condition = self._extract_loop_condition(node)
+        for block in self._all(node, "generate_block"):
+            self._extract_instances_from_block(block, module, condition)
+
+    def _process_conditional_generate_instances(self, node, module):
+        """Process conditional generate constructs for instances."""
+        condition = self._extract_if_condition(node)
+        # Find if_generate_construct inside conditional_generate_construct
+        if_construct = self._first(node, "if_generate_construct")
+        if if_construct:
+            for block in if_construct.named_children:
+                if block.type == "generate_block":
+                    self._extract_instances_from_block(block, module, condition)
+
+
+    def _handle_module_instantiation(self, node, module, condition=None):
 
         param_node = self._first(node, "parameter_value_assignment")
 
@@ -386,14 +502,15 @@ class SystemVerilogIRBuilder(IRBuilder):
             instance = self._build_instance_from_hier(
                 hier_node,
                 module_name,
-                parameters
+                parameters,
+                condition
             )
 
             if instance:
                 module.instances.append(instance)
 
 
-    def _build_instance_from_hier(self, node, module_name, parameters):
+    def _build_instance_from_hier(self, node, module_name, parameters, condition=None):
 
         # 1️⃣ récupérer le bloc name_of_instance
         name_block = self._first(node, "name_of_instance")
@@ -434,7 +551,8 @@ class SystemVerilogIRBuilder(IRBuilder):
             name=instance_name,
             module_name=module_name,
             parameters=parameters.copy(),
-            connections=connections
+            connections=connections,
+            condition=condition
         )
 
     def _extract_param_override(self, node):

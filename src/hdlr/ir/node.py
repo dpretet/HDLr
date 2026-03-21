@@ -94,6 +94,24 @@ class HierarchyBuilder:
             parent_params={}
         )
 
+    def _evaluate_condition(self, condition: str, context: dict[str, int]) -> bool:
+        """Evaluate a generate condition in the current parameter context.
+        
+        Args:
+            condition: The condition string to evaluate
+            context: Dictionary of available parameters
+            
+        Returns:
+            True if condition evaluates to true, False otherwise
+        """
+        try:
+            # Use the existing eval_expr function to evaluate the condition
+            result = eval_expr(condition, context)
+            return bool(result)
+        except:
+            # If evaluation fails, assume condition is false
+            return False
+
     def _elaborate(
         self,
         module,
@@ -137,8 +155,11 @@ class HierarchyBuilder:
             parameters=dict(module_specific_params),
         )
 
-        # Step 2: Elaborate child instances
+        # Step 2: Elaborate child instances (filtering conditional ones)
         for inst in module.instances:
+            # Skip conditional instances that don't meet their condition
+            if inst.condition and not self._evaluate_condition(inst.condition, local_params):
+                continue
             child_module = self.design.modules[inst.module_name]
 
             # 1. Start with parent context

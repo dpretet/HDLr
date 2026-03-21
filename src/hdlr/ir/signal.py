@@ -12,6 +12,7 @@ class Signal:
     kind: str
     width_str: tuple[str, str] | None = None
     width_int: tuple[int, int] | None = None
+    condition: str | None = None  # Condition for generate blocks
 
     def to_dict(self) -> dict:
         data = {

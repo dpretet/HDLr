@@ -300,6 +300,11 @@ class VerilogIRBuilder(IRBuilder):
 
         for item in node.children:
 
+            # 🆕 Handle generate blocks for Verilog (at module level)
+            if item.type == "generate_region":
+                self._extract_from_generate_blocks(item, module)
+                continue
+
             if item.type != "module_or_generate_item":
                 continue
 
@@ -314,13 +319,122 @@ class VerilogIRBuilder(IRBuilder):
                 for child in pkg_decl.children:
 
                     if child.type == "data_declaration":
-                        self._handle_data_declaration(child, module)
+                        signals = self._handle_data_declaration(child, module)
+                        module.signals.extend(signals)
 
                     elif child.type == "net_declaration":
-                        self._handle_net_declaration(child, module)
+                        signals = self._handle_net_declaration(child, module)
+                        module.signals.extend(signals)
+
+    def _extract_from_generate_blocks(self, node, module):
+        """Extract signals, parameters, and instances from Verilog generate blocks."""
+        for item in node.children:
+            if item.type == "module_or_generate_item":
+                for subitem in item.children:
+                    if subitem.type == "loop_generate_construct":
+                        self._process_loop_generate(subitem, module)
+                    elif subitem.type == "if_generate_construct":
+                        self._process_conditional_generate(subitem, module)
+
+    def _process_loop_generate(self, node, module):
+        """Process Verilog loop generate constructs."""
+        # Extract loop condition (e.g., "i < DEPTH")
+        condition = self._extract_loop_condition(node)
+        
+        # Process each generate block in the loop
+        for block in node.children:
+            if block.type == "generate_block":
+                self._extract_signals_from_block(block, module, condition)
+                self._extract_instances_from_block(block, module, condition)
+
+    def _process_conditional_generate(self, node, module):
+        """Process Verilog conditional generate constructs."""
+        # Extract the if condition (e.g., "WIDTH > 8")
+        condition = self._extract_if_condition(node)
+        
+        for block in node.children:
+            if block.type == "generate_block":
+                self._extract_signals_from_block(block, module, condition)
+                self._extract_instances_from_block(block, module, condition)
+
+    def _extract_signals_from_block(self, block, module, condition):
+        """Extract signals from a Verilog generate block with condition."""
+        self._extract_signals_from_node_recursive(block, module, condition)
+
+    def _extract_signals_from_node_recursive(self, node, module, condition):
+        """Recursively extract signals from any node in Verilog generate blocks."""
+        
+        # Handle direct signal declarations
+        if node.type == "data_declaration":
+            signals = self._handle_data_declaration(node, module, condition)
+            module.signals.extend(signals)
+        elif node.type == "net_declaration":
+            signals = self._handle_net_declaration(node, module, condition)
+            module.signals.extend(signals)
+        elif node.type == "loop_generate_construct":
+            # Handle nested loop generate constructs - process the block but don't recurse into children
+            nested_condition = self._extract_loop_condition(node)
+            for block in node.children:
+                if block.type == "generate_block":
+                    self._extract_signals_from_node_recursive(block, module, nested_condition)
+            return  # Don't process children of loop_generate_construct
+        elif node.type == "if_generate_construct":
+            # Handle nested conditional generate constructs - process the block but don't recurse into children
+            nested_condition = self._extract_if_condition(node)
+            for block in node.children:
+                if block.type == "generate_block":
+                    self._extract_signals_from_node_recursive(block, module, nested_condition)
+            return  # Don't process children of if_generate_construct
+        
+        # Recursively process children (but not for generate constructs)
+        for child in node.named_children:
+            self._extract_signals_from_node_recursive(child, module, condition)
+
+    def _extract_instances_from_block(self, block, module, condition):
+        """Extract instances from a Verilog generate block with condition."""
+        # Verilog has nested structure: generate_block -> module_or_generate_item -> udp_instantiation
+        for item in block.named_children:
+            if item.type == "module_instantiation":
+                self._handle_module_instantiation(item, module, condition)
+            elif item.type == "module_or_generate_item":
+                # Deeper nesting in Verilog generate blocks
+                for subitem in item.named_children:
+                    if subitem.type == "udp_instantiation":
+                        self._handle_module_instantiation(subitem, module, condition)
+                    elif subitem.type == "package_or_generate_item_declaration":
+                        for subsubitem in subitem.named_children:
+                            if subsubitem.type == "udp_instantiation":
+                                self._handle_module_instantiation(subsubitem, module, condition)
+
+    def _extract_loop_condition(self, node):
+        """Extract the loop condition from a Verilog loop generate construct."""
+        # Look for constant_expression nodes that contain comparison operators
+        for child in node.children:
+            if child.type == "constant_expression":
+                # Check if this looks like a comparison (contains operators)
+                text = child.text.decode()
+                if any(op in text for op in ['<', '>', '==', '!=', '<=', '>=']):
+                    return text
+            elif child.type == "generate_loop_statement":
+                # Also check inside generate_loop_statement
+                for subchild in child.children:
+                    if subchild.type == "constant_expression":
+                        text = subchild.text.decode()
+                        if any(op in text for op in ['<', '>', '==', '!=', '<=', '>=']):
+                            return text
+        return None
+
+    def _extract_if_condition(self, node):
+        """Extract the if condition from a Verilog conditional generate construct."""
+        # Find the condition expression
+        # Verilog uses constant_expression for if conditions, not generate_conditional_expression
+        for child in node.children:
+            if child.type == "constant_expression":
+                return child.text.decode()
+        return None
 
 
-    def _handle_data_declaration(self, node, module):
+    def _handle_data_declaration(self, node, module, condition=None):
 
         kind = None
         width = None
@@ -366,8 +480,9 @@ class VerilogIRBuilder(IRBuilder):
         )
 
         if list_node is None:
-            return
+            return []
 
+        signals = []
         for var_decl in list_node.children:
 
             if var_decl.type != "variable_decl_assignment":
@@ -382,15 +497,17 @@ class VerilogIRBuilder(IRBuilder):
             if ident is None:
                 continue
 
-            module.signals.append(
-                Signal(
-                    name=ident.text.decode(),
-                    kind=kind,
-                    width_str=width
-                )
+            signal = Signal(
+                name=ident.text.decode(),
+                kind=kind,
+                width_str=width,
+                condition=condition
             )
+            signals.append(signal)
+        
+        return signals
 
-    def _handle_net_declaration(self, node, module):
+    def _handle_net_declaration(self, node, module, condition=None):
 
         kind = None
         width = None
@@ -428,8 +545,9 @@ class VerilogIRBuilder(IRBuilder):
         )
 
         if not list_node:
-            return
+            return []
 
+        signals = []
         for decl in list_node.children:
 
             if decl.type != "net_decl_assignment":
@@ -444,13 +562,15 @@ class VerilogIRBuilder(IRBuilder):
             if not ident:
                 continue
 
-            module.signals.append(
-                Signal(
-                    name=ident.text.decode(),
-                    kind=kind,   # "wire"
-                    width_str=width
-                )
+            signal = Signal(
+                name=ident.text.decode(),
+                kind=kind,   # "wire"
+                width_str=width,
+                condition=condition
             )
+            signals.append(signal)
+        
+        return signals
 
 
     def _extract_instances(self, node, module):
@@ -458,12 +578,39 @@ class VerilogIRBuilder(IRBuilder):
         for item in node.children:
 
             if item.type != "module_or_generate_item":
+                # 🆕 Handle generate blocks for instances (at module level)
+                if item.type == "generate_region":
+                    self._extract_instances_from_generate(item, module)
                 continue
 
+            # Handle both module_instantiation (normal instances) and udp_instantiation (generate block instances)
             for inst_node in self._all(item, "module_instantiation"):
                 self._handle_module_instantiation(inst_node, module)
+            
+            for inst_node in self._all(item, "udp_instantiation"):
+                self._handle_module_instantiation(inst_node, module)
 
-    def _handle_module_instantiation(self, node, module):
+    def _extract_instances_from_generate(self, node, module):
+        """Extract instances from Verilog generate blocks."""
+        for item in node.children:
+            if item.type == "loop_generate_construct":
+                self._process_loop_generate_instances(item, module)
+            elif item.type == "conditional_generate_construct":
+                self._process_conditional_generate_instances(item, module)
+
+    def _process_loop_generate_instances(self, node, module):
+        """Process Verilog loop generate constructs for instances."""
+        condition = self._extract_loop_condition(node)
+        for block in self._all(node, "generate_block"):
+            self._extract_instances_from_block(block, module, condition)
+
+    def _process_conditional_generate_instances(self, node, module):
+        """Process Verilog conditional generate constructs for instances."""
+        condition = self._extract_if_condition(node)
+        for block in self._all(node, "generate_block"):
+            self._extract_instances_from_block(block, module, condition)
+
+    def _handle_module_instantiation(self, node, module, condition=None):
 
         # -------------------------
         # Module name
@@ -491,25 +638,39 @@ class VerilogIRBuilder(IRBuilder):
         parameters = self._extract_param_override(param_node)
 
         # -------------------------
-        # Instance (TON AST → hierarchical_instance)
+        # Instance (Verilog uses udp_instance, not hierarchical_instance)
         # -------------------------
 
-        for hier_node in self._all(node, "hierarchical_instance"):
+        hier_nodes = list(self._all(node, "hierarchical_instance"))
+        udp_instance_nodes = list(self._all(node, "udp_instance"))
+
+        for hier_node in hier_nodes:
             instance = self._build_instance_from_hier(
                 hier_node,
                 module_name,
-                parameters
+                parameters,
+                condition
+            )
+            if instance:
+                module.instances.append(instance)
+
+        for udp_inst_node in udp_instance_nodes:
+            instance = self._build_instance_from_udp_instance(
+                udp_inst_node,
+                module_name,
+                parameters,
+                condition
             )
             if instance:
                 module.instances.append(instance)
 
 
-    def _build_instance_from_hier(self, node, module_name, parameters):
+    def _build_instance_from_hier(self, node, module_name, parameters, condition=None):
 
-        # Instance name
+        # Instance name - Verilog uses simple_identifier for udp_instantiation
         name_node = next(
             (c for c in node.children
-            if c.type == "name_of_instance"),
+            if c.type in ("name_of_instance", "simple_identifier")),
             None
         )
 
@@ -551,8 +712,77 @@ class VerilogIRBuilder(IRBuilder):
             name=instance_name,
             module_name=module_name,
             parameters=parameters.copy(),
-            connections=connections
+            connections=connections,
+            condition=condition
         )
+
+    def _build_instance_from_udp_instance(self, node, module_name, parameters, condition=None):
+        """Build instance from Verilog udp_instance node."""
+
+        # Instance name - udp_instance uses name_of_instance -> instance_identifier -> simple_identifier
+        name_of_instance_node = next(
+            (c for c in node.children
+            if c.type == "name_of_instance"),
+            None
+        )
+
+        if not name_of_instance_node:
+            return None
+
+        instance_identifier_node = next(
+            (c for c in name_of_instance_node.children
+            if c.type == "instance_identifier"),
+            None
+        )
+
+        if not instance_identifier_node:
+            return None
+
+        simple_identifier_node = next(
+            (c for c in instance_identifier_node.children
+            if c.type == "simple_identifier"),
+            None
+        )
+
+        if not simple_identifier_node:
+            return None
+
+        instance_name = simple_identifier_node.text.decode()
+
+        # Connections - udp_instance uses terminals (output_terminal, input_terminal)
+        connections = {}
+        
+        # Find all terminals
+        terminal_index = 0
+        for child in node.children:
+            if child.type == "output_terminal":
+                # First terminal is output
+                connections[f"port_{terminal_index}"] = self._extract_terminal_connection(child)
+                terminal_index += 1
+            elif child.type == "input_terminal":
+                # Subsequent terminals are inputs
+                connections[f"port_{terminal_index}"] = self._extract_terminal_connection(child)
+                terminal_index += 1
+
+        return Instance(
+            name=instance_name,
+            module_name=module_name,
+            parameters=parameters.copy(),
+            connections=connections,
+            condition=condition
+        )
+
+    def _extract_terminal_connection(self, terminal_node):
+        """Extract connection from udp terminal node."""
+        # Look for simple_identifier in the terminal
+        for child in terminal_node.children:
+            if child.type == "simple_identifier":
+                return child.text.decode()
+            # Recursively search
+            result = self._extract_terminal_connection(child)
+            if result:
+                return result
+        return None
 
     def _extract_param_override(self, node):
 
