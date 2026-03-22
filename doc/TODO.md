@@ -1,8 +1,7 @@
 # TODO Dev Plan
 - [/] Support Rich API
-- [ ] Ajouter un test pour les operateurs ternaires
+- [ ] Review the vide coded parsers and clean them up
 - [ ] Ajouter les tests de la commande elaboration
-- [ ] Support des generate et des instances et parameter signaux dessous
 - [ ] Support de signaux a deux dimensions
 - [ ] Support VHDL
 - [ ] Add instance drop command
@@ -16,6 +15,8 @@
 - [ ] RDC analysis
 
 # Done
+- [X] Ajouter un test pour les operateurs ternaires
+- [X] Support des generate et des instances et parameter signaux dessous
 - [X] Add packaging for Github release
 - [X] Support parameters, signals, module, instances
 - [X] Support verilog
