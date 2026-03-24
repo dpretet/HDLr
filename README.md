@@ -80,8 +80,8 @@ hdlr scan ./src/verilog/ ./src/systemverilog/
 
 ```
 HDL Source Files → Tree-Sitter Parser → IR Builder → Design Analysis
-                    (SystemVerilog/Verilog)      (Modules, Ports, 
-                                              Parameters, 
+                    (SystemVerilog/Verilog)      (Modules, Ports,
+                                              Parameters,
                                               Instances)
 ```
 
@@ -108,10 +108,3 @@ HDL Source Files → Tree-Sitter Parser → IR Builder → Design Analysis
 
 MIT License - See [LICENSE](LICENSE) for details
 
-## Contributing
-
-Contributions welcome! Check out the [TODO list](doc/TODO.md) for planned features and improvements.
-
----
-
-Built with ❤️ for hardware designers by hardware designers
