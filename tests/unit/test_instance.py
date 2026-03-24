@@ -15,6 +15,7 @@ def test_instance_basic():
     assert inst.module_name == "adder"
     assert inst.parameters == {}
     assert inst.connections == {}
+    assert inst.condition is None
 
 
 def test_instance_with_parameters():
@@ -37,6 +38,16 @@ def test_instance_with_connections():
 
     assert inst.connections["a"] == "sig_a"
     assert inst.connections["b"] == "sig_b"
+
+
+def test_instance_with_condition():
+    inst = Instance(
+        name="u_cond",
+        module_name="optional_block",
+        condition="ENABLE_FEATURE"
+    )
+
+    assert inst.condition == "ENABLE_FEATURE"
 
 
 def test_instance_to_dict_minimal():
@@ -97,4 +108,30 @@ def test_instance_to_dict_full():
             "clk": "clk_i"
         }
     }
+
+
+def test_instance_to_dict_with_condition():
+    """Condition should not be included in to_dict output"""
+    inst = Instance(
+        name="u_cond",
+        module_name="optional_block",
+        condition="ENABLE_FEATURE",
+        parameters={"WIDTH": "8"}
+    )
+
+    assert inst.to_dict() == {
+        "module": "optional_block",
+        "parameters": {
+            "WIDTH": "8"
+        }
+    }
+
+
+def test_instance_equality():
+    inst1 = Instance(name="u0", module_name="adder")
+    inst2 = Instance(name="u0", module_name="adder")
+    inst3 = Instance(name="u1", module_name="adder")
+
+    assert inst1 == inst2
+    assert inst1 != inst3
 

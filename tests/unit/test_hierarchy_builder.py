@@ -378,3 +378,65 @@ def test_parameter_override_with_dependent_params():
     assert child.parameters["DEPTH"] == 256  # Overridden value
     assert child.parameters["WIDTH"] == 64   # Overridden value
     assert child.parameters["ADDR_WIDTH"] == 8  # Recalculated: log2(256) = 8
+
+
+def test_conditional_instance_elaboration():
+    """Test elaboration with conditional instances."""
+    # Create child module
+    child_module = Module(name="optional_block")
+
+    # Create parent with conditional instance
+    parent_module = Module(
+        name="top",
+        parameters=[
+            Parameter(name="ENABLE_FEATURE", value_int=1)
+        ],
+        instances=[
+            Instance(
+                name="opt1",
+                module_name="optional_block",
+                condition="ENABLE_FEATURE"
+            )
+        ]
+    )
+
+    design = Design()
+    design.add_module(child_module)
+    design.add_module(parent_module)
+
+    builder = HierarchyBuilder(design)
+    root = builder.build("top")
+
+    # Should have child when condition is true
+    assert len(root.children) == 1
+
+
+def test_conditional_instance_false():
+    """Test elaboration when condition is false."""
+    # Create child module
+    child_module = Module(name="optional_block")
+
+    # Create parent with conditional instance that evaluates to false
+    parent_module = Module(
+        name="top",
+        parameters=[
+            Parameter(name="ENABLE_FEATURE", value_int=0)
+        ],
+        instances=[
+            Instance(
+                name="opt1",
+                module_name="optional_block",
+                condition="ENABLE_FEATURE"
+            )
+        ]
+    )
+
+    design = Design()
+    design.add_module(child_module)
+    design.add_module(parent_module)
+
+    builder = HierarchyBuilder(design)
+    root = builder.build("top")
+
+    # Should NOT have child when condition is false
+    assert len(root.children) == 0

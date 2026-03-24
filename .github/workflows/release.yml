@@ -1,4 +1,4 @@
-name: Release
+name: Release Multi-Python
 
 on:
   push:
@@ -7,12 +7,13 @@ on:
 
 jobs:
   build:
-    name: Build (${{ matrix.os }})
+    name: Build (${{ matrix.os }} - Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
 
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
 
     permissions:
       contents: write
@@ -21,41 +22,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # -------------------------
-      # Build
-      # -------------------------
-      - name: Build (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Build
         run: |
           chmod +x flow.sh
           ./flow.sh build
 
-      - name: Build (Windows)
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          ./flow.sh build
-
-      # -------------------------
-      # Prepare artifact name
-      # -------------------------
       - name: Prepare artifact name
         id: prep
         shell: bash
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
+          PYVER=${{ matrix.python-version }}
           if [ "${{ runner.os }}" = "Linux" ]; then
-            NAME="hdlr-${VERSION}-linux-x86_64"
+            NAME="hdlr-${VERSION}-linux-py${PYVER}-x86_64"
           elif [ "${{ runner.os }}" = "macOS" ]; then
-            NAME="hdlr-${VERSION}-macos-arm64"
+            NAME="hdlr-${VERSION}-macos-py${PYVER}-arm64"
           else
-            NAME="hdlr-${VERSION}-windows-x86_64.exe"
+            NAME="hdlr-${VERSION}-windows-py${PYVER}-x86_64.exe"
           fi
           echo "ASSET_NAME=$NAME" >> $GITHUB_OUTPUT
 
-      # -------------------------
-      # Move binary
-      # -------------------------
       - name: Move binary
         shell: bash
         run: |
@@ -66,9 +57,6 @@ jobs:
             cp dist/hdlr dist/${{ steps.prep.outputs.ASSET_NAME }}
           fi
 
-      # -------------------------
-      # Upload to release
-      # -------------------------
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
