@@ -13,12 +13,12 @@ HDLr is a powerful tool for parsing and elaborating SystemVerilog and Verilog de
 
 ## Features
 
-✅ **Dual Language Support**: Parse both SystemVerilog and Verilog files
-✅ **Hierarchy Analysis**: Build complete design hierarchies with resolved parameters
-✅ **Parameter Extraction**: Extract and display module parameters and localparams
-✅ **Port Analysis**: Detailed port direction and width information
-✅ **Instance Tracking**: Identify module instantiations and connections
-✅ **Signal Detection**: Extract internal signals and their types
+- **Language Support**: Parse both SystemVerilog and Verilog files
+- **Hierarchy Analysis**: Build complete design hierarchies with resolved parameters
+- **Parameter Extraction**: Extract and display module parameters and localparams
+- **Port Analysis**: Detailed port direction and width information
+- **Instance Tracking**: Identify module instantiations and connections
+- **Signal Detection**: Extract internal signals and their types
 
 ## Installation
 
