@@ -1,0 +1,27 @@
+{
+  "alu": {
+    "name": "alu",
+    "parameters": {},
+    "ports": {
+      "a": { "direction": "input" },
+      "b": { "direction": "input" },
+      "y": { "direction": "output" }
+    },
+    "signals": {
+      "clk": { "kind": "logic" },
+      "data": { "kind": "logic", "width": { "msb": "7", "lsb": "0" } }
+    },
+    "instances": {
+      "u_sub": {
+        "module": "submodule",
+        "parameters": {
+          "WIDTH": "8"
+        },
+        "connections": {
+          "clk": "clk",
+          "data": "data"
+        }
+      }
+    }
+  }
+}

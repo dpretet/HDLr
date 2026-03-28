@@ -1,0 +1,14 @@
+{
+  "input_output": {
+    "name": "input_output",
+    "parameters": {},
+    "ports": {
+      "a": { "direction": "input" },
+      "b": { "direction": "input" },
+      "x": { "direction": "output" },
+      "y": { "direction": "output" }
+    },
+    "signals": {},
+    "instances": {}
+  }
+}

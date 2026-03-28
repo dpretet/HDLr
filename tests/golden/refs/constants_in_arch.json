@@ -1,0 +1,25 @@
+{
+    "constants_in_arch": {
+        "name": "constants_in_arch",
+        "parameters": {
+            "WIDTH": { "name": "WIDTH", "value": "8" },
+            "DOUBLE_WIDTH": { "name": "DOUBLE_WIDTH", "value": "WIDTH * 2" },
+            "FIXED_DEPTH": { "name": "FIXED_DEPTH", "value": "16" }
+        },
+        "ports": {
+            "clk": { "direction": "input" },
+            "data": { "direction": "output", "width": { "msb": "WIDTH-1", "lsb": "0" } }
+        },
+        "signals": {
+            "internal_reg": {
+                "kind": "logic",
+                "width": { "msb": "DOUBLE_WIDTH-1", "lsb": "0" }
+            },
+            "internal_mem": {
+                "kind": "logic",
+                "width": { "msb": "FIXED_DEPTH-1", "lsb": "0" }
+            }
+        },
+        "instances": {}
+    }
+}

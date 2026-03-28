@@ -55,11 +55,19 @@ build_package() {
 }
 
 run_tests() {
-    echo "🧪 Installing project in editable mode..."
-    pip install -e .
+    echo "🧪 Installing project in editable mode with dev dependencies..."
+    pip install -e ".[dev]"
 
-    echo "🧪 Running tests..."
-    pytest -vv
+    echo "🧪 Running tests with coverage..."
+    pytest --cov=src/hdlr --cov-report=term-missing -vv
+}
+
+run_lint() {
+    echo "🧹 Installing project in editable mode with dev dependencies..."
+    pip install -e ".[dev]"
+
+    echo "🧹 Running ruff on src/hdlr..."
+    ruff check src/hdlr
 }
 
 # -----------------------------
@@ -72,13 +80,16 @@ case "$COMMAND" in
     test)
         run_tests
         ;;
+    lint)
+        run_lint
+        ;;
     run)
         build_package
         echo "Run: $(which hdlr)"
         ./.venv/bin/hdlr
         ;;
     *)
-        echo "Usage: $0 {build|test|run}"
+        echo "Usage: $0 {build|test|lint|run}"
         exit 1
         ;;
 esac

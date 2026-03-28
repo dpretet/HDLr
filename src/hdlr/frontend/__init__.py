@@ -6,6 +6,7 @@
 
 from hdlr.frontend.verilog.parser import parse as parse_verilog
 from hdlr.frontend.systemverilog.parser import parse as parse_systemverilog
+from hdlr.frontend.vhdl.parser import parse as parse_vhdl
 
 class VerilogFrontend:
     name = "verilog"
@@ -17,11 +18,17 @@ class SystemVerilogFrontend:
     def parse_file(self, path: str):
         return parse_systemverilog(path)
 
+class VhdlFrontend:
+    name = "vhdl"
+    def parse_file(self, path: str):
+        return parse_vhdl(path)
+
 
 
 _FRONTENDS = {
     "verilog": VerilogFrontend(),
     "systemverilog": SystemVerilogFrontend(),
+    "vhdl": VhdlFrontend(),
 }
 
 

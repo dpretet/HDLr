@@ -22,6 +22,7 @@ REF_DIR = BASE_DIR / "refs"
 EXTENSION_MAP = {
     ".v": "verilog",
     ".sv": "systemverilog",
+    ".vhd": "vhdl",
 }
 
 
@@ -30,16 +31,17 @@ def normalize(data):
 
 
 def list_test_cases():
-    # on garde la logique existante
+    # Include all HDL files: SystemVerilog, Verilog, and VHDL
     return [p.stem for p in INPUT_DIR.glob("*.sv")] + \
-           [p.stem for p in INPUT_DIR.glob("*.v")]
+           [p.stem for p in INPUT_DIR.glob("*.v")] + \
+           [p.stem for p in INPUT_DIR.glob("*.vhd")]
 
 
 @pytest.mark.parametrize("name", list_test_cases())
 def test_golden(name):
-    # détecte automatiquement .sv ou .v
+
     input_file = None
-    for ext in (".sv", ".v"):
+    for ext in (".sv", ".v", ".vhd"):
         candidate = INPUT_DIR / f"{name}{ext}"
         if candidate.exists():
             input_file = candidate
@@ -50,10 +52,10 @@ def test_golden(name):
     ref_file = REF_DIR / f"{name}.json"
 
     assert ref_file.exists(), (
-        f"Missing golden reference for {name}."
+        f"Missing golden reference for {name}. "
+        f"Tried both {name}_vhd.json and {name}.json"
     )
 
-    # ✅ même logique que le CLI
     lang = EXTENSION_MAP.get(input_file.suffix)
     assert lang, f"Unsupported extension: {input_file.suffix}"
 

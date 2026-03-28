@@ -1,0 +1,33 @@
+{
+  "io_param_signals_sv": {
+    "name": "io_param_signals_sv",
+    "parameters": {
+      "NAME": { "name": "NAME", "value": "0" }
+    },
+    "ports": {
+      "aclk": { "direction": "input" },
+      "aresetn": { "direction": "input" },
+      "encoded": { "direction": "output" },
+      "encoded1": {
+        "direction": "output",
+        "width": { "msb": "3", "lsb": "0" }
+      },
+      "encoded2": {
+        "direction": "output",
+        "width": { "msb": "3", "lsb": "0" }
+      }
+    },
+    "signals": {
+      "register0": { "kind": "logic" },
+      "register1": {
+        "kind": "logic",
+        "width": { "msb": "31", "lsb": "0" }
+      },
+      "register2": {
+        "kind": "logic",
+        "width": { "msb": "31", "lsb": "0" }
+      }
+    },
+    "instances": {}
+  }
+}
