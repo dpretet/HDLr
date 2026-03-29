@@ -17,15 +17,15 @@ def test_simple_hierarchy():
     """Test building a simple hierarchy with one module."""
     # Create a simple module
     module = Module(name="top")
-    
+
     # Create design and add module
     design = Design()
     design.add_module(module)
-    
+
     # Build hierarchy
     builder = HierarchyBuilder(design)
     root = builder.build("top")
-    
+
     # Verify result
     assert isinstance(root, Node)
     assert root.module_name == "top"
@@ -44,15 +44,15 @@ def test_hierarchy_with_parameters():
             Parameter(name="DEPTH", value_str="16")
         ]
     )
-    
+
     # Create design and add module
     design = Design()
     design.add_module(module)
-    
+
     # Build hierarchy
     builder = HierarchyBuilder(design)
     root = builder.build("top")
-    
+
     # Verify result
     assert root.parameters == {"WIDTH": 32, "DEPTH": 16}
 
@@ -61,7 +61,7 @@ def test_hierarchy_with_child_instance():
     """Test building hierarchy with child instances."""
     # Create child module
     child_module = Module(name="adder")
-    
+
     # Create parent module with instance
     parent_module = Module(
         name="top",
@@ -69,16 +69,16 @@ def test_hierarchy_with_child_instance():
             Instance(name="u0", module_name="adder")
         ]
     )
-    
+
     # Create design and add modules
     design = Design()
     design.add_module(child_module)
     design.add_module(parent_module)
-    
+
     # Build hierarchy
     builder = HierarchyBuilder(design)
     root = builder.build("top")
-    
+
     # Verify result
     assert len(root.children) == 1
     assert root.children[0].module_name == "adder"
@@ -94,7 +94,7 @@ def test_parameter_inheritance():
             Parameter(name="CHILD_WIDTH", value_str="WIDTH * 2")
         ]
     )
-    
+
     # Create parent module
     parent_module = Module(
         name="top",
@@ -105,19 +105,19 @@ def test_parameter_inheritance():
             Instance(name="u0", module_name="child")
         ]
     )
-    
+
     # Create design and add modules
     design = Design()
     design.add_module(child_module)
     design.add_module(parent_module)
-    
+
     # Build hierarchy
     builder = HierarchyBuilder(design)
     root = builder.build("top")
-    
+
     # Verify parent parameters
     assert root.parameters["WIDTH"] == 16
-    
+
     # Verify child parameters (should inherit and calculate)
     assert len(root.children) == 1
     assert root.children[0].parameters["CHILD_WIDTH"] == 32  # 16 * 2
@@ -133,7 +133,7 @@ def test_parameter_override():
             Parameter(name="WIDTH", value_int=16)
         ]
     )
-    
+
     # Create parent module with instance that overrides parameters
     parent_module = Module(
         name="top",
@@ -148,16 +148,16 @@ def test_parameter_override():
             )
         ]
     )
-    
+
     # Create design and add modules
     design = Design()
     design.add_module(child_module)
     design.add_module(parent_module)
-    
+
     # Build hierarchy
     builder = HierarchyBuilder(design)
     root = builder.build("top")
-    
+
     # Verify child parameters are overridden
     assert len(root.children) == 1
     child = root.children[0]
@@ -177,15 +177,15 @@ def test_verilog_number_formats():
             Parameter(name="OCT_VAL", value_str="8'o77")
         ]
     )
-    
+
     # Create design and add module
     design = Design()
     design.add_module(module)
-    
+
     # Build hierarchy
     builder = HierarchyBuilder(design)
     root = builder.build("top")
-    
+
     # Verify number format conversions
     assert root.parameters["HEX_VAL"] == 255  # 0xFF
     assert root.parameters["DEC_VAL"] == 42   # 42
@@ -203,15 +203,15 @@ def test_clog2_function():
             Parameter(name="DATA_WIDTH", value_str="$clog2(16)")
         ]
     )
-    
+
     # Create design and add module
     design = Design()
     design.add_module(module)
-    
+
     # Build hierarchy
     builder = HierarchyBuilder(design)
     root = builder.build("top")
-    
+
     # Verify $clog2 calculations
     assert root.parameters["ADDR_WIDTH"] == 8   # log2(256) = 8
     assert root.parameters["DATA_WIDTH"] == 4   # log2(16) = 4
@@ -227,15 +227,15 @@ def test_ternary_operator():
             Parameter(name="SIZE", value_str="(WIDTH > 16) ? 64 : 32")
         ]
     )
-    
+
     # Create design and add module
     design = Design()
     design.add_module(module)
-    
+
     # Build hierarchy
     builder = HierarchyBuilder(design)
     root = builder.build("top")
-    
+
     # Verify ternary operator evaluation
     assert root.parameters["WIDTH"] == 32
     assert root.parameters["SIZE"] == 64  # 32 > 16, so 64
@@ -252,15 +252,15 @@ def test_complex_expression():
             Parameter(name="RESULT", value_str="BASE * FACTOR + $clog2(BASE)")
         ]
     )
-    
+
     # Create design and add module
     design = Design()
     design.add_module(module)
-    
+
     # Build hierarchy
     builder = HierarchyBuilder(design)
     root = builder.build("top")
-    
+
     # Verify complex expression: 8 * 4 + log2(8) = 32 + 3 = 35
     assert root.parameters["RESULT"] == 35
 
@@ -269,10 +269,10 @@ def test_missing_module_error():
     """Test error handling for missing module."""
     # Create design without the module
     design = Design()
-    
+
     # Create builder and try to build non-existent module
     builder = HierarchyBuilder(design)
-    
+
     # Should raise KeyError
     with pytest.raises(KeyError):
         builder.build("non_existent_module")
@@ -282,13 +282,13 @@ def test_duplicate_module_error():
     """Test error handling for duplicate modules."""
     # Create design
     design = Design()
-    
+
     # Add same module twice
     module1 = Module(name="top")
     module2 = Module(name="top")
-    
+
     design.add_module(module1)
-    
+
     # Should raise ValueError for duplicate
     with pytest.raises(ValueError):
         design.add_module(module2)
@@ -298,7 +298,7 @@ def test_deep_hierarchy():
     """Test building a deep hierarchy."""
     # Create leaf module
     leaf_module = Module(name="leaf")
-    
+
     # Create middle module
     middle_module = Module(
         name="middle",
@@ -307,7 +307,7 @@ def test_deep_hierarchy():
             Instance(name="leaf2", module_name="leaf")
         ]
     )
-    
+
     # Create top module
     top_module = Module(
         name="top",
@@ -316,17 +316,17 @@ def test_deep_hierarchy():
             Instance(name="mid2", module_name="middle")
         ]
     )
-    
+
     # Create design and add modules
     design = Design()
     design.add_module(leaf_module)
     design.add_module(middle_module)
     design.add_module(top_module)
-    
+
     # Build hierarchy
     builder = HierarchyBuilder(design)
     root = builder.build("top")
-    
+
     # Verify deep hierarchy structure
     assert len(root.children) == 2  # mid1 and mid2
     for child in root.children:
@@ -347,7 +347,7 @@ def test_parameter_override_with_dependent_params():
             Parameter(name="ADDR_WIDTH", value_str="$clog2(DEPTH)")
         ]
     )
-    
+
     # Create top module with FIFO instance that overrides DEPTH
     top_module = Module(
         name="top",
@@ -362,16 +362,16 @@ def test_parameter_override_with_dependent_params():
             )
         ]
     )
-    
+
     # Create design and add modules
     design = Design()
     design.add_module(fifo_module)
     design.add_module(top_module)
-    
+
     # Build hierarchy
     builder = HierarchyBuilder(design)
     root = builder.build("top")
-    
+
     # Verify child parameters
     assert len(root.children) == 1
     child = root.children[0]

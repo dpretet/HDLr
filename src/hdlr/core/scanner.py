@@ -16,10 +16,10 @@ from pathlib import Path
 
 def collect_files(inputs):
     """Collect SystemVerilog and Verilog files from input paths.
-    
+
     Args:
         inputs: List of file/directory paths to scan
-        
+
     Returns:
         List of Path objects for all found .v and .sv files
     """

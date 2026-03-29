@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 @dataclass
 class Module:
     """Represents a hardware module in the IR.
-    
+
     Attributes:
         name: Module name
         ports: List of port objects
@@ -33,7 +33,7 @@ class Module:
 
     def to_dict(self) -> dict:
         """Convert module to dictionary representation.
-        
+
         Returns:
             Dictionary with module name and sorted collections of
             parameters, ports, signals, and instances

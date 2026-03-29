@@ -25,10 +25,10 @@ parser = Parser(SYSTEMVERILOG_LANGUAGE)
 
 def parse(input_data):
     """Parse SystemVerilog source and return IR modules.
-    
+
     Args:
         input_data: Either a Path object or string containing SystemVerilog source
-        
+
     Returns:
         List of Module objects extracted from the source
     """

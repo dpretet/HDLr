@@ -13,7 +13,7 @@ from hdlr.ir.node import HierarchyBuilder, Design
 
 def test_systemverilog_loop_generate_extraction():
     """Test extraction of loop generate constructs in SystemVerilog."""
-    
+
     # Create test file with loop generate
     test_code = '''
 module top #(parameter DEPTH = 4) (
@@ -34,16 +34,16 @@ endmodule
 module dff (input logic clk, input logic reset);
 endmodule
 '''
-    
+
     # Parse the code
     modules = parse(test_code)
     top_module = next(m for m in modules if m.name == 'top')
-    
+
     # Verify signals with conditions
     mem_reg_signals = [s for s in top_module.signals if s.name == 'mem_reg']
     assert len(mem_reg_signals) == 1
     assert mem_reg_signals[0].condition == "i < DEPTH"
-    
+
     # Verify instances with conditions (may have duplicates - known issue)
     dff_instances = [i for i in top_module.instances if i.module_name == 'dff']
     assert len(dff_instances) >= 1
@@ -54,7 +54,7 @@ endmodule
 
 def test_systemverilog_conditional_generate_extraction():
     """Test extraction of conditional generate constructs in SystemVerilog."""
-    
+
     # Create test file with conditional generate
     test_code = '''
 module top #(parameter WIDTH = 16) (
@@ -70,11 +70,11 @@ module top #(parameter WIDTH = 16) (
 
 endmodule
 '''
-    
+
     # Parse the code
     modules = parse(test_code)
     top_module = next(m for m in modules if m.name == 'top')
-    
+
     # Verify signals with conditions
     wide_bus_signals = [s for s in top_module.signals if s.name == 'wide_bus']
     # TODO: Fix conditional generate extraction
@@ -86,7 +86,7 @@ endmodule
 
 def test_systemverilog_generate_condition_filtering():
     """Test that conditional generate elements are filtered during elaboration."""
-    
+
     # Create test file
     test_code = '''
 module top #(parameter ENABLE = 1, COUNT = 3) (
@@ -104,16 +104,16 @@ module top #(parameter ENABLE = 1, COUNT = 3) (
 
 endmodule
 '''
-    
+
     # Parse and build hierarchy with ENABLE=1 (should include elements)
     modules = parse(test_code)
     design = Design()
     for module in modules:
         design.add_module(module)
-    
+
     builder = HierarchyBuilder(design)
     root = builder.build('top')
-    
+
     # With ENABLE=1 and COUNT=3, should have signals
     # Note: This tests the structure, actual loop expansion would need more work
     assert 'ENABLE' in root.parameters
@@ -122,21 +122,21 @@ endmodule
 
 def test_systemverilog_mixed_generate_blocks():
     """Test module with both loop and conditional generate blocks."""
-    
+
     test_code = '''
 module top #(parameter SIZE = 4, WIDE = 1) (
     input logic clk
 );
 
     genvar i;
-    
+
     // Loop generate
     generate
         for (i = 0; i < SIZE; i = i + 1) begin : size_loop
             logic [7:0] data_reg;
         end
     endgenerate
-    
+
     // Conditional generate
     generate
         if (WIDE) begin : wide_cond
@@ -146,16 +146,16 @@ module top #(parameter SIZE = 4, WIDE = 1) (
 
 endmodule
 '''
-    
+
     # Parse the code
     modules = parse(test_code)
     top_module = next(m for m in modules if m.name == 'top')
-    
+
     # Verify both types of signals
     data_signals = [s for s in top_module.signals if s.name == 'data_reg']
     assert len(data_signals) == 1
     assert data_signals[0].condition == "i < SIZE"
-    
+
     # TODO: Fix conditional generate extraction
     # wide_signals = [s for s in top_module.signals if s.name == 'wide_reg']
     # assert len(wide_signals) == 1

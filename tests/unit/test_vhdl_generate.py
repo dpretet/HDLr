@@ -13,7 +13,7 @@ from hdlr.ir.node import HierarchyBuilder, Design
 
 def test_vhdl_loop_generate_extraction():
     """Test extraction of loop generate constructs in VHDL."""
-    
+
     # Create test file with loop generate
     test_code = '''
 library IEEE;
@@ -47,11 +47,11 @@ entity dff is
     );
 end dff;
 '''
-    
+
     # Parse the code
     modules = parse(test_code)
     top_module = next(m for m in modules if m.name == 'top')
-    
+
     # Verify that the instance has the correct condition
     # Note: mem_reg signal is declared OUTSIDE the generate block, so it doesn't have a condition
     # Only instances and signals declared INSIDE generate blocks get conditions
@@ -60,7 +60,7 @@ end dff;
     # Verify that all instances have the correct condition
     for inst in dff_instances:
         assert inst.condition == "i < DEPTH", f"Expected condition 'i < DEPTH', got '{inst.condition}'"
-    
+
     # Verify that mem_reg signal exists but has no condition (declared outside generate block)
     mem_reg_signals = [s for s in top_module.signals if s.name == 'mem_reg']
     assert len(mem_reg_signals) == 1
@@ -69,7 +69,7 @@ end dff;
 
 def test_vhdl_conditional_generate_extraction():
     """Test extraction of conditional generate constructs in VHDL."""
-    
+
     # Create test file with conditional generate
     test_code = '''
 library IEEE;
@@ -90,11 +90,11 @@ begin
     end generate;
 end rtl;
 '''
-    
+
     # Parse the code
     modules = parse(test_code)
     top_module = next(m for m in modules if m.name == 'top')
-    
+
     # Verify signals with conditions
     wide_bus_signals = [s for s in top_module.signals if s.name == 'wide_bus']
     # TODO: Fix conditional generate extraction
@@ -106,7 +106,7 @@ end rtl;
 
 def test_vhdl_generate_with_genvar_declaration():
     """Test VHDL generate with genvar declared in loop."""
-    
+
     test_code = '''
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
@@ -127,11 +127,11 @@ begin
     end generate;
 end rtl;
 '''
-    
+
     # Parse the code
     modules = parse(test_code)
     top_module = next(m for m in modules if m.name == 'top')
-    
+
     # Verify signals - array_reg is declared OUTSIDE the generate block, so no condition
     array_signals = [s for s in top_module.signals if s.name == 'array_reg']
     assert len(array_signals) == 1
@@ -140,7 +140,7 @@ end rtl;
 
 def test_vhdl_nested_generate_blocks():
     """Test VHDL with nested generate blocks."""
-    
+
     test_code = '''
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
@@ -163,11 +163,11 @@ begin
     end generate;
 end rtl;
 '''
-    
+
     # Parse the code
     modules = parse(test_code)
     top_module = next(m for m in modules if m.name == 'top')
-    
+
     # Verify nested signals - nested_reg is declared OUTSIDE the generate blocks, so no condition
     nested_signals = [s for s in top_module.signals if s.name == 'nested_reg']
     assert len(nested_signals) == 1
@@ -176,7 +176,7 @@ end rtl;
 
 def test_vhdl_generate_no_condition():
     """Test VHDL generate blocks without explicit conditions."""
-    
+
     test_code = '''
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
@@ -196,11 +196,11 @@ begin
     end generate;
 end rtl;
 '''
-    
+
     # Parse the code
     modules = parse(test_code)
     top_module = next(m for m in modules if m.name == 'top')
-    
+
     # Verify signals - fixed_reg is declared OUTSIDE the generate block, so no condition
     fixed_signals = [s for s in top_module.signals if s.name == 'fixed_reg']
     assert len(fixed_signals) == 1

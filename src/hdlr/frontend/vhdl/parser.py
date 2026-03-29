@@ -25,10 +25,10 @@ parser = Parser(VHDL_LANGUAGE)
 
 def parse(input_data):
     """Parse VHDL source and return IR modules.
-    
+
     Args:
         input_data: Either a Path object or string containing VHDL source
-        
+
     Returns:
         List of Module objects extracted from the source
     """
@@ -40,5 +40,5 @@ def parse(input_data):
     tree = parser.parse(source.encode("utf8"))
     builder = VhdlIRBuilder()
     modules = builder.build(tree)
-    
+
     return modules

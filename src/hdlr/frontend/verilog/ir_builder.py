@@ -340,7 +340,7 @@ class VerilogIRBuilder(IRBuilder):
         """Process Verilog loop generate constructs."""
         # Extract loop condition (e.g., "i < DEPTH")
         condition = self._extract_loop_condition(node)
-        
+
         # Process each generate block in the loop
         for block in node.children:
             if block.type == "generate_block":
@@ -351,7 +351,7 @@ class VerilogIRBuilder(IRBuilder):
         """Process Verilog conditional generate constructs."""
         # Extract the if condition (e.g., "WIDTH > 8")
         condition = self._extract_if_condition(node)
-        
+
         for block in node.children:
             if block.type == "generate_block":
                 self._extract_signals_from_block(block, module, condition)
@@ -363,7 +363,7 @@ class VerilogIRBuilder(IRBuilder):
 
     def _extract_signals_from_node_recursive(self, node, module, condition):
         """Recursively extract signals from any node in Verilog generate blocks."""
-        
+
         # Handle direct signal declarations
         if node.type == "data_declaration":
             signals = self._handle_data_declaration(node, module, condition)
@@ -385,7 +385,7 @@ class VerilogIRBuilder(IRBuilder):
                 if block.type == "generate_block":
                     self._extract_signals_from_node_recursive(block, module, nested_condition)
             return  # Don't process children of if_generate_construct
-        
+
         # Recursively process children (but not for generate constructs)
         for child in node.named_children:
             self._extract_signals_from_node_recursive(child, module, condition)
@@ -504,7 +504,7 @@ class VerilogIRBuilder(IRBuilder):
                 condition=condition
             )
             signals.append(signal)
-        
+
         return signals
 
     def _handle_net_declaration(self, node, module, condition=None):
@@ -569,7 +569,7 @@ class VerilogIRBuilder(IRBuilder):
                 condition=condition
             )
             signals.append(signal)
-        
+
         return signals
 
 
@@ -586,7 +586,7 @@ class VerilogIRBuilder(IRBuilder):
             # Handle both module_instantiation (normal instances) and udp_instantiation (generate block instances)
             for inst_node in self._all(item, "module_instantiation"):
                 self._handle_module_instantiation(inst_node, module)
-            
+
             for inst_node in self._all(item, "udp_instantiation"):
                 self._handle_module_instantiation(inst_node, module)
 
@@ -751,7 +751,7 @@ class VerilogIRBuilder(IRBuilder):
 
         # Connections - udp_instance uses terminals (output_terminal, input_terminal)
         connections = {}
-        
+
         # Find all terminals
         terminal_index = 0
         for child in node.children:

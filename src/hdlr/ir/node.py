@@ -19,7 +19,7 @@ import math
 @dataclass
 class Node:
     """Represents a node in the design hierarchy.
-    
+
     Attributes:
         module_name: Name of the module
         instance_name: Name of the instance (None for top module)
@@ -35,7 +35,7 @@ class Node:
 @dataclass
 class Design:
     """Container for all modules in a design.
-    
+
     Attributes:
         modules: Dictionary mapping module names to module objects
     """
@@ -43,10 +43,10 @@ class Design:
 
     def add_module(self, module):
         """Add a module to the design.
-        
+
         Args:
             module: Module object to add
-            
+
         Raises:
             ValueError: If a module with the same name already exists
         """
@@ -56,10 +56,10 @@ class Design:
 
     def get(self, name):
         """Get a module by name.
-        
+
         Args:
             name: Name of the module to retrieve
-            
+
         Returns:
             The module object, or None if not found
         """
@@ -69,7 +69,7 @@ class Design:
 @dataclass
 class HierarchyBuilder:
     """Builds design hierarchies with resolved parameters.
-    
+
     Attributes:
         design: Design object containing all modules
     """
@@ -77,10 +77,10 @@ class HierarchyBuilder:
 
     def build(self, top_name: str) -> Node:
         """Build hierarchy starting from a top module.
-        
+
         Args:
             top_name: Name of the top module
-            
+
         Returns:
             Root node of the hierarchy
         """
@@ -96,11 +96,11 @@ class HierarchyBuilder:
 
     def _evaluate_condition(self, condition: str, context: dict[str, int]) -> bool:
         """Evaluate a generate condition in the current parameter context.
-        
+
         Args:
             condition: The condition string to evaluate
             context: Dictionary of available parameters
-            
+
         Returns:
             True if condition evaluates to true, False otherwise
         """
@@ -119,12 +119,12 @@ class HierarchyBuilder:
         parent_params: dict[str, int],
     ) -> Node:
         """Recursively elaborate a module and its children.
-        
+
         Args:
             module: Module object to elaborate
             instance_name: Name of this instance (None for top)
             parent_params: Parameters inherited from parent context
-            
+
         Returns:
             Elaborated node with resolved parameters and children
         """
@@ -185,8 +185,8 @@ class HierarchyBuilder:
             # 4. Re-evaluate dependent parameters
             # Parameters that depend on overridden parameters need to be re-evaluated
             for param in child_module.parameters:
-                if (param.name not in overridden_params and 
-                    param.value_str is not None and 
+                if (param.name not in overridden_params and
+                    param.value_str is not None and
                     any(override in param.value_str for override in overridden_params)):
                     # This parameter depends on an overridden parameter, re-evaluate it
                     child_params[param.name] = eval_expr(param.value_str, child_params)
@@ -205,20 +205,20 @@ class HierarchyBuilder:
 
 def eval_expr(expr: str, context: dict[str, int]) -> int:
     """Evaluate a SystemVerilog parameter expression.
-    
+
     Supports:
     - Verilog number formats (e.g., 8'hFF, 16'd42)
     - $clog2 function
     - Ternary operators (condition ? true : false)
     - Basic arithmetic expressions
-    
+
     Args:
         expr: Expression string to evaluate
         context: Dictionary of available variables/parameters
-        
+
     Returns:
         Evaluated integer result
-        
+
     Raises:
         ValueError: If expression contains invalid $clog2 argument
     """
@@ -266,10 +266,10 @@ def eval_expr(expr: str, context: dict[str, int]) -> int:
         condition = match.group(1).strip()
         true_expr = match.group(2).strip()
         false_expr = match.group(3).strip()
-        
+
         # Evaluate condition first
         cond_value = eval_expr(condition, context)
-        
+
         # Return the appropriate branch
         if cond_value:
             return str(eval_expr(true_expr, context))
@@ -278,7 +278,7 @@ def eval_expr(expr: str, context: dict[str, int]) -> int:
 
     # Handle nested ternary operators by processing multiple times
     pattern = r"\(([^?]*)\)\s*\?\s*([^:]*?):\s*([^:]+?)(?=\W|$)"
-    
+
     max_iterations = 10  # Prevent infinite loops
     for _ in range(max_iterations):
         new_expr = re.sub(pattern, convert_ternary_inner, expr)
@@ -288,15 +288,15 @@ def eval_expr(expr: str, context: dict[str, int]) -> int:
 
     # Step 3: Clean up comments and final evaluation
     expr = expr.strip()
-    
+
     # Remove C-style comments /* ... */
     expr = re.sub(r'/\*.*?\*/', '', expr)
     # Remove C++ style comments // ...
     expr = re.sub(r'//.*$', '', expr)
-    
+
     # Clean up multiple spaces
     expr = re.sub(r'\s+', ' ', expr).strip()
-    
+
     # Handle malformed ternary operator results
     if ":" in expr and "?" not in expr:
         number_match = re.search(r'\d+', expr)

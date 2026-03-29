@@ -14,20 +14,20 @@ must implement and provides helper methods for tree traversal.
 
 class IRBuilder:
     """Base class for IR builders.
-    
+
     Specific language builders should inherit from this class and implement
     the build method.
     """
 
     def build(self, tree):
         """Build IR from AST - to be implemented by subclasses.
-        
+
         Args:
             tree: Tree-sitter AST root node
-            
+
         Returns:
             List of Module objects
-            
+
         Raises:
             NotImplementedError: Must be implemented by subclasses
         """
@@ -39,11 +39,11 @@ class IRBuilder:
 
     def _first(self, node, type_name):
         """Get first named child of specified type.
-        
+
         Args:
             node: Parent node to search
             type_name: Type name to find
-            
+
         Returns:
             First child with matching type, or None if not found
         """
@@ -54,11 +54,11 @@ class IRBuilder:
 
     def _all(self, node, type_name):
         """Get all named children of specified type.
-        
+
         Args:
             node: Parent node to search
             type_name: Type name to find
-            
+
         Returns:
             List of all children with matching type
         """

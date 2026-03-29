@@ -16,7 +16,7 @@ import argparse
 
 def build_parser() -> argparse.ArgumentParser:
     """Build the argument parser for HDLr CLI.
-    
+
     Returns:
         Configured ArgumentParser object
     """
