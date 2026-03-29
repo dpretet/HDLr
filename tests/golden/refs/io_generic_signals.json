@@ -1,6 +1,6 @@
 {
-  "io_param_signals_sv": {
-    "name": "io_param_signals_sv",
+  "io_generic_signals": {
+    "name": "io_generic_signals",
     "parameters": {
       "NAME": { "name": "NAME", "value": "0" }
     },

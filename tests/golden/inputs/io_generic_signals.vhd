@@ -4,7 +4,7 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 
-entity io_param_signals_sv is
+entity io_generic_signals is
     generic (
         NAME : integer := 0
     );
@@ -15,9 +15,9 @@ entity io_param_signals_sv is
         encoded1 : out STD_LOGIC_VECTOR(3 downto 0);
         encoded2 : out STD_LOGIC_VECTOR(3 downto 0)
     );
-end io_param_signals_sv;
+end io_generic_signals;
 
-architecture rtl of io_param_signals_sv is
+architecture rtl of io_generic_signals is
     signal register0 : STD_LOGIC;
     signal register1 : STD_LOGIC_VECTOR(31 downto 0);
     signal register2 : STD_LOGIC_VECTOR(31 downto 0);
