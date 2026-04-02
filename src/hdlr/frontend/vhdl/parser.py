@@ -12,11 +12,12 @@ the tree-sitter VHDL grammar. It converts source code to AST
 and then builds the HDLr IR.
 """
 
+from pathlib import Path
+
 import tree_sitter_vhdl
 from tree_sitter import Language, Parser
-from pathlib import Path
-from .ir_builder import VhdlIRBuilder
 
+from .ir_builder import VhdlIRBuilder
 
 # Initialize VHDL language and parser
 VHDL_LANGUAGE = Language(tree_sitter_vhdl.language())

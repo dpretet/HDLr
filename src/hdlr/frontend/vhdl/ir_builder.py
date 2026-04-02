@@ -11,13 +11,12 @@ This module builds the HDLr IR from VHDL AST.
 It maps VHDL constructs to the common IR used by Verilog/SystemVerilog.
 """
 
-from ..common.ir_builder_base import IRBuilder
-
+from ...ir.instance import Instance
 from ...ir.module import Module
+from ...ir.parameter import Parameter
 from ...ir.port import Port
 from ...ir.signal import Signal
-from ...ir.parameter import Parameter
-from ...ir.instance import Instance
+from ..common.ir_builder_base import IRBuilder
 
 
 class VhdlIRBuilder(IRBuilder):

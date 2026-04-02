@@ -12,11 +12,12 @@ the tree-sitter SystemVerilog grammar. It converts source code to AST
 and then builds the HDLr IR.
 """
 
+from pathlib import Path
+
 import tree_sitter_systemverilog
 from tree_sitter import Language, Parser
-from pathlib import Path
-from .ir_builder import SystemVerilogIRBuilder
 
+from .ir_builder import SystemVerilogIRBuilder
 
 # Initialize SystemVerilog language and parser
 SYSTEMVERILOG_LANGUAGE = Language(tree_sitter_systemverilog.language())

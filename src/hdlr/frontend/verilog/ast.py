@@ -6,6 +6,7 @@
 
 from frontend.common.ast_base import ASTNode
 
+
 class VerilogNode(ASTNode):
 
     def name(self):

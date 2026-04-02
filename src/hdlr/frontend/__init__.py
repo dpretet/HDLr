@@ -4,9 +4,10 @@
 # distributed under the mit license
 # https://opensource.org/licenses/mit-license.php
 
-from hdlr.frontend.verilog.parser import parse as parse_verilog
 from hdlr.frontend.systemverilog.parser import parse as parse_systemverilog
+from hdlr.frontend.verilog.parser import parse as parse_verilog
 from hdlr.frontend.vhdl.parser import parse as parse_vhdl
+
 
 class VerilogFrontend:
     name = "verilog"

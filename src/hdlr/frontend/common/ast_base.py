@@ -4,8 +4,7 @@
 # distributed under the mit license
 # https://opensource.org/licenses/mit-license.php
 
-from dataclasses import dataclass
-from typing import List, Optional, Any
+from typing import Any
 
 
 class ASTNode:

@@ -11,9 +11,9 @@ This module provides the core functionality for building design hierarchies
 and resolving parameter expressions in SystemVerilog/Verilog designs.
 """
 
-from dataclasses import dataclass, field
-import re
 import math
+import re
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -29,7 +29,7 @@ class Node:
     module_name: str
     instance_name: str | None
     parameters: dict[str, int]
-    children: list["HierarchyNode"] = field(default_factory=list)
+    children: list["Node"] = field(default_factory=list)
 
 
 @dataclass
@@ -108,7 +108,7 @@ class HierarchyBuilder:
             # Use the existing eval_expr function to evaluate the condition
             result = eval_expr(condition, context)
             return bool(result)
-        except:
+        except Exception:
             # If evaluation fails, assume condition is false
             return False
 
@@ -224,7 +224,6 @@ def eval_expr(expr: str, context: dict[str, int]) -> int:
     """
     # Step 1: Convert Verilog number formats
     def convert_verilog_number(match):
-        width = match.group(1)
         base = match.group(2).lower()
         value = match.group(3).replace("_", "")
 

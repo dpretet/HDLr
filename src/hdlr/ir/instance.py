@@ -6,6 +6,7 @@
 
 from dataclasses import dataclass, field
 
+
 @dataclass
 class Instance:
     name: str

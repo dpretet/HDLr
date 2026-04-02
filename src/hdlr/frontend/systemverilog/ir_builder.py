@@ -4,13 +4,13 @@
 # distributed under the mit license
 # https://opensource.org/licenses/mit-license.php
 
-from ..common.ir_builder_base import IRBuilder
-
+from ...ir.instance import Instance
 from ...ir.module import Module
+from ...ir.parameter import Parameter
 from ...ir.port import Port
 from ...ir.signal import Signal
-from ...ir.parameter import Parameter
-from ...ir.instance import Instance
+from ..common.ir_builder_base import IRBuilder
+
 # from ..common.debugging import ts_print
 
 

@@ -12,19 +12,16 @@ This module provides the main entry point for the HDLr tool, which can:
 - Elaborate designs by building module hierarchies with resolved parameters
 """
 
+from rich.box import ROUNDED
 from rich.console import Console
 from rich.panel import Panel
-from rich.tree import Tree
 from rich.table import Table
-from rich.text import Text
-from rich.syntax import Syntax
-from rich.box import ROUNDED
+from rich.tree import Tree
 
 from hdlr.core.argparser import build_parser
 from hdlr.core.scanner import collect_files
 from hdlr.frontend import get_frontend
-from hdlr.ir.node import HierarchyBuilder
-from hdlr.ir.node import Design
+from hdlr.ir.node import Design, HierarchyBuilder
 
 
 def is_verilog(path: str) -> bool:
