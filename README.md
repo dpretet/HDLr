@@ -9,11 +9,11 @@
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![Lint](https://img.shields.io/badge/lint-ruff-blueviolet)
 
-HDLr is a powerful tool for parsing and elaborating SystemVerilog and Verilog designs. Built on Tree-Sitter for robust parsing, HDLr provides deep insights into your hardware design hierarchy.
+HDLr is a powerful tool for parsing and elaborating SystemVerilog, Verilog, and VHDL designs. Built on Tree-Sitter for robust parsing, HDLr provides deep insights into your hardware design hierarchy.
 
 ## Features
 
-- **Language Support**: Parse both SystemVerilog and Verilog files
+- **Language Support**: Parse SystemVerilog, Verilog, and VHDL files
 - **Hierarchy Analysis**: Build complete design hierarchies with resolved parameters
 - **Parameter Extraction**: Extract and display module parameters and localparams
 - **Port Analysis**: Detailed port direction and width information
@@ -44,7 +44,7 @@ hdlr scan <files_or_directories>
 ```
 
 Discover all modules in your design files with detailed information about:
-- Parameters and localparams
+- Generics, parameters and localparams
 - Input/output ports with width specifications
 - Internal signals
 - Module instances and their connections
@@ -76,17 +76,27 @@ hdlr elaborate ./rtl/ --top cpu_core
 hdlr scan ./src/verilog/ ./src/systemverilog/
 ```
 
+### VHDL Support
+```bash
+# Scan VHDL files
+hdlr scan ./src/vhdl/
+
+# Mixed language processing
+hdlr scan ./src/verilog/ ./src/vhdl/ ./src/systemverilog/
+```
+
 ## Architecture
 
 ```
 HDL Source Files → Tree-Sitter Parser → IR Builder → Design Analysis
-                    (SystemVerilog/Verilog)      (Modules, Ports,
-                                              Parameters,
+                    (SystemVerilog/Verilog/VHDL) (Modules/Entities, Ports,
+                                              Parameters/Generics,
                                               Instances)
 ```
 
 ## Supported Constructs
 
+### SystemVerilog/Verilog
 - **Modules**: ANSI and non-ANSI style module definitions
 - **Parameters**: Module parameters and localparams
 - **Ports**: Input/output ports with width specifications
@@ -94,15 +104,26 @@ HDL Source Files → Tree-Sitter Parser → IR Builder → Design Analysis
 - **Signals**: Internal wire/reg/logic declarations
 - **Generate Blocks**: Basic generate construct support
 
+### VHDL
+- **Entities & Architectures**: Entity declarations with architectures
+- **Generics**: Generic parameters in entity declarations
+- **Ports**: Input/output ports with VHDL direction mapping
+- **Constants**: Constant declarations in architecture bodies
+- **Signals**: Internal signal declarations
+- **Instances**: Component instantiations with port maps
+- **Generate Blocks**: For generate and if generate statements
+
 ## Roadmap
 
 - ✅ Verilog support
 - ✅ SystemVerilog support
+- ✅ VHDL support (entities, architectures, generics, constants, instances)
 - ✅ Parameter extraction
 - ✅ Instance hierarchy building
 - ✅ Rich terminal visualization
-- 🚧 VHDL support (planned)
+- 🚧 Advanced features (tasks, functions, procedures, packages)
 - 🚧 Clock domain crossing analysis
+- 🚧 Formal verification integration
 
 ## License
 

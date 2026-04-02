@@ -3,7 +3,6 @@
 - [ ] Review the vide coded parsers and clean them up
 - [ ] Ajouter les tests de la commande elaboration
 - [ ] Support de signaux a deux dimensions
-- [ ] Support VHDL
 - [ ] Add instance drop command
 - [ ] Deploy in brew, pypi and w/ CURL way
 - [ ] Extraire les horloges, reset et les assigner aux outputs et signaux
@@ -15,6 +14,7 @@
 - [ ] RDC analysis
 
 # Done
+- [X] Support VHDL
 - [X] Ajouter un test pour les operateurs ternaires
 - [X] Support des generate et des instances et parameter signaux dessous
 - [X] Add packaging for Github release
