@@ -8,7 +8,7 @@
 File and directory scanner for HDL source files.
 
 This module provides functionality to recursively scan directories
-and collect SystemVerilog/Verilog files for processing.
+and collect SystemVerilog/Verilog/VHDL files for processing.
 """
 
 from pathlib import Path
@@ -32,7 +32,7 @@ def collect_files(inputs):
             files.append(p)
 
         elif p.is_dir():
-            for ext in ("*.v", "*.sv"):
+            for ext in ("*.v", "*.sv", "*.vhd"):
                 files.extend(p.rglob(ext))
 
     return files

@@ -53,15 +53,12 @@ class VerilogIRBuilder(IRBuilder):
         if header is None:
             raise RuntimeError("module_header introuvable")
 
-        name_node = next(
-            (c for c in header.children if c.type == "simple_identifier"),
-            None
-        )
+        name_node = self._first(header, "simple_identifier")
 
         if name_node is None:
             raise RuntimeError("Nom du module introuvable")
 
-        return name_node.text.decode()
+        return self._get_text(name_node)
 
     # ---------------------------------------------------------
     # Ports (ANSI style)
@@ -74,10 +71,7 @@ class VerilogIRBuilder(IRBuilder):
         if ansi_header is None:
             return
 
-        port_list = next(
-            (c for c in ansi_header.children if c.type == "list_of_port_declarations"),
-            None
-        )
+        port_list = self._first(ansi_header, "list_of_port_declarations")
 
         if port_list is None:
             return
@@ -102,12 +96,9 @@ class VerilogIRBuilder(IRBuilder):
 
             # port name
             if child.type == "port_identifier":
-                ident = next(
-                    (c for c in child.children if c.type == "simple_identifier"),
-                    None
-                )
+                ident = self._first(child, "simple_identifier")
                 if ident:
-                    name = ident.text.decode()
+                    name = self._get_text(ident)
 
         if name is None:
             return None
@@ -137,21 +128,14 @@ class VerilogIRBuilder(IRBuilder):
             if not header:
                 continue
 
-            param_port_list = next(
-                (c for c in header.children if c.type == "parameter_port_list"),
-                None
-            )
+            param_port_list = self._first(header, "parameter_port_list")
 
             if not param_port_list:
                 continue
 
             for param_port_decl in param_port_list.children:
 
-                param_decl = next(
-                    (c for c in param_port_decl.children
-                    if c.type == "parameter_declaration"),
-                    None
-                )
+                param_decl = self._first(param_port_decl, "parameter_declaration")
 
                 if param_decl:
                     self._handle_parameter_declaration(param_decl, module)
@@ -180,11 +164,7 @@ class VerilogIRBuilder(IRBuilder):
 
     def _handle_parameter_declaration(self, node, module):
 
-        list_node = next(
-            (c for c in node.children
-            if c.type == "list_of_param_assignments"),
-            None
-        )
+        list_node = self._first(node, "list_of_param_assignments")
 
         if not list_node:
             return
@@ -194,23 +174,20 @@ class VerilogIRBuilder(IRBuilder):
             if assignment.type != "param_assignment":
                 continue
 
-            name_node = next(
-                (c for c in assignment.children
-                if c.type == "parameter_identifier"),
-                None
-            )
+            name_node = self._first(assignment, "parameter_identifier")
 
-            value_node = next(
-                (c for c in assignment.children
-                if "expression" in c.type),
-                None
-            )
+            value_node = None
+            for child_type in ["expression", "constant_expression", "mintypmax_expression", "constant_param_expression"]:
+                potential_node = self._first(assignment, child_type)
+                if potential_node:
+                    value_node = potential_node
+                    break
 
             if not name_node:
                 continue
 
-            name = name_node.text.decode()
-            value = value_node.text.decode() if value_node else None
+            name = self._get_text(name_node)
+            value = self._get_text(value_node) if value_node else None
 
             module.parameters.append(
                 Parameter(

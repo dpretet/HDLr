@@ -55,7 +55,7 @@ class VhdlIRBuilder(IRBuilder):
                         # If we have the corresponding entity, build the module
                         if arch_entity_name in entities:
                             entity_node = entities[arch_entity_name]
-                            module = self._build_module_from_entity_arch(entity_node, sub_child)
+                            module = self._build_module(entity_node, sub_child)
                             if module:
                                 modules.append(module)
                                 # Remove from entities to avoid duplicates
@@ -63,13 +63,13 @@ class VhdlIRBuilder(IRBuilder):
 
         # Any remaining entities without architectures
         for entity_name, entity_node in entities.items():
-            module = self._build_module_from_entity_only(entity_node)
+            module = self._build_module(entity_node, None)
             if module:
                 modules.append(module)
 
         return modules
 
-    def _build_module_from_entity_arch(self, entity_node, architecture_node):
+    def _build_module(self, entity_node, architecture_node):
         """
         Build module from entity + architecture pair.
 
@@ -87,65 +87,71 @@ class VhdlIRBuilder(IRBuilder):
         self._extract_parameters(entity_node, module)
         self._extract_ports(entity_node, module)
 
-        # Extract architecture information
-        self._extract_signals(architecture_node, module, None)
-        self._extract_instances(architecture_node, module, None)
-
-        return module
-
-    def _build_module_from_entity_only(self, entity_node):
-        """
-        Build module from standalone entity (no architecture).
-
-        Args:
-            entity_node: entity_declaration node
-
-        Returns:
-            Module object
-        """
-        entity_name = self._extract_entity_name(entity_node)
-        module = Module(name=entity_name)
-
-        # Extract entity information
-        self._extract_parameters(entity_node, module)
-        self._extract_ports(entity_node, module)
-
-        return module
-
-    def _build_design_unit(self, node):
-        """
-        Build module from a design unit (entity + architecture).
-
-        Args:
-            node: design_unit node
-
-        Returns:
-            Module object or None
-        """
-        entity_node = None
-        architecture_node = None
-
-        for child in node.children:
-            if child.type == "entity_declaration":
-                entity_node = child
-            elif child.type == "architecture_definition":
-                architecture_node = child
-
-        if entity_node and architecture_node:
-            entity_name = self._extract_entity_name(entity_node)
-            module = Module(name=entity_name)
-
-            # Extract entity information
-            self._extract_parameters(entity_node, module)
-            self._extract_ports(entity_node, module)
-
+        if architecture_node is not None:
             # Extract architecture information
-            self._extract_signals(architecture_node, module)
-            self._extract_instances(architecture_node, module)
+            self._extract_signals(architecture_node, module, None)
+            self._extract_instances(architecture_node, module, None)
 
-            return module
+        return module
 
-        return None
+    # --------------------------------------------------------------
+    # VHDL-specific helper methods
+    # --------------------------------------------------------------
+
+    def _get_name_text(self, node):
+        """Get text from a name node (can be compound).
+
+        Args:
+            node: Name node
+
+        Returns:
+            Concatenated name text
+        """
+        if not node or node.type != "name":
+            return ""
+
+        parts = []
+        for child in node.children:
+            if child.type == "identifier":
+                parts.append(self._get_text(child))
+
+        return "_".join(parts) if parts else ""
+
+    def _get_expression_text(self, node):
+        """Get text from an expression node (VHDL-specific override).
+
+        Args:
+            node: Expression node
+
+        Returns:
+            Expression text, or empty string if not found
+        """
+        if not node:
+            return ""
+
+        # Try to find the most specific expression child (VHDL types)
+        expr_types = ["decimal_integer", "identifier", "literal", "simple_expression"]
+        for expr_type in expr_types:
+            expr_node = self._first(node, expr_type)
+            if expr_node:
+                return self._get_text(expr_node)
+
+        # For initialiser nodes, look for the actual value
+        if node.type == "initialiser":
+            # Look for variable_assignment (:=) and get what comes after
+            for child in node.children:
+                if child.type == "variable_assignment":
+                    # Get the next sibling after variable_assignment
+                    found_assignment = False
+                    for child in node.children:
+                        if found_assignment and child.type in ["decimal_integer", "identifier", "literal", "conditional_expression"]:
+                            return self._get_text(child)
+                        if child.type == "variable_assignment":
+                            found_assignment = True
+                    break
+
+        # Fallback: return the whole node text
+        return self._get_text(node)
 
     def _extract_entity_name(self, entity_node):
         """
@@ -157,9 +163,10 @@ class VhdlIRBuilder(IRBuilder):
         Returns:
             Entity name as string
         """
-        for child in entity_node.children:
-            if child.type == "identifier":
-                return child.text.decode("utf8")
+        # Use _first() method from base class
+        id_node = self._first(entity_node, "identifier")
+        if id_node:
+            return self._get_text(id_node)
         return "unknown"
 
     def _extract_architecture_entity_name(self, architecture_node):
@@ -172,12 +179,10 @@ class VhdlIRBuilder(IRBuilder):
         Returns:
             Entity name as string
         """
-        for child in architecture_node.children:
-            if child.type == "name":
-                # The name node contains the entity name
-                for name_child in child.children:
-                    if name_child.type == "identifier":
-                        return name_child.text.decode("utf8")
+        # Use _first() method from base class
+        name_node = self._first(architecture_node, "name")
+        if name_node:
+            return self._get_name_text(name_node)
         return "unknown"
 
     def _extract_parameters(self, entity_node, module):
@@ -189,35 +194,24 @@ class VhdlIRBuilder(IRBuilder):
             module: Module object to populate
         """
         # Find generic clause in entity (could be in entity_head)
-        generic_clause = None
-        for child in entity_node.children:
-            if child.type == "generic_clause":
-                generic_clause = child
-                break
-            elif child.type == "entity_head":
-                # Look inside entity_head for generic_clause
-                for sub_child in child.children:
-                    if sub_child.type == "generic_clause":
-                        generic_clause = sub_child
-                        break
+        generic_clause = self._first(entity_node, "generic_clause")
+        if not generic_clause:
+            # Look inside entity_head for generic_clause
+            entity_head = self._first(entity_node, "entity_head")
+            if entity_head:
+                generic_clause = self._first(entity_head, "generic_clause")
 
         if not generic_clause:
             return
 
         # Find interface_list in generic clause
-        interface_list = None
-        for child in generic_clause.children:
-            if child.type == "interface_list":
-                interface_list = child
-                break
-
+        interface_list = self._first(generic_clause, "interface_list")
         if not interface_list:
             return
 
         # Extract each generic declaration
-        for child in interface_list.children:
-            if child.type == "interface_declaration":
-                self._extract_single_parameter(child, module)
+        for interface_decl in self._all(interface_list, "interface_declaration"):
+            self._extract_single_parameter(interface_decl, module)
 
     def _extract_single_parameter(self, interface_decl, module):
         """
@@ -230,30 +224,24 @@ class VhdlIRBuilder(IRBuilder):
         name = ""
         value = None
 
-        # Extract name and value from interface_declaration children
-        for child in interface_decl.children:
-            if child.type == "identifier_list":
-                # Get first identifier (VHDL allows multiple names, but we take first)
-                for id_child in child.children:
-                    if id_child.type in ["identifier", "library_type"]:
-                        name = id_child.text.decode("utf8")
-                        break
-            elif child.type == "simple_mode_indication":
-                # In VHDL generics, the value might be in the simple_mode_indication
-                # Look for initialiser node
-                for sub_child in child.children:
-                    if sub_child.type == "initialiser":
-                        # Extract value from initialiser
-                        for init_child in sub_child.children:
-                            if init_child.type in [
-                                "expression",
-                                "literal",
-                                "identifier",
-                                "conditional_expression",
-                            ]:
-                                value = init_child.text.decode("utf8")
-                                break
-                        break
+        # Extract name from identifier_list
+        id_list = self._first(interface_decl, "identifier_list")
+        if id_list:
+            # Get first identifier (VHDL allows multiple names, but we take first)
+            id_node = self._first(id_list, "identifier")
+            if id_node:
+                name = self._get_text(id_node)
+            elif not name:  # Try library_type as fallback
+                id_node = self._first(id_list, "library_type")
+                if id_node:
+                    name = self._get_text(id_node)
+
+        # Extract value from simple_mode_indication
+        mode_indication = self._first(interface_decl, "simple_mode_indication")
+        if mode_indication:
+            initialiser = self._first(mode_indication, "initialiser")
+            if initialiser:
+                value = self._get_expression_text(initialiser)
 
         if name:
             # Create parameter - store as string to match Verilog behavior
@@ -274,32 +262,22 @@ class VhdlIRBuilder(IRBuilder):
             module: Module object to populate
         """
         # Find port clause in entity (could be in entity_head)
-        port_clause = None
-        for child in entity_node.children:
-            if child.type == "port_clause":
-                port_clause = child
-                break
-            elif child.type == "entity_head":
-                # Look inside entity_head for port_clause
-                for sub_child in child.children:
-                    if sub_child.type == "port_clause":
-                        port_clause = sub_child
-                        break
+        port_clause = self._first(entity_node, "port_clause")
+        if not port_clause:
+            # Look inside entity_head for port_clause
+            entity_head = self._first(entity_node, "entity_head")
+            if entity_head:
+                port_clause = self._first(entity_head, "port_clause")
 
         if not port_clause:
             return
 
         # Find interface_list in port clause
-        interface_list = None
-        for child in port_clause.children:
-            if child.type == "interface_list":
-                interface_list = child
-                break
-
+        interface_list = self._first(port_clause, "interface_list")
         if not interface_list:
             return
 
-        # Map VHDL directions to IR directions
+        # Map VHDL directions to IR directions, as done for verilog
         direction_map = {
             "in": "input",
             "out": "output",
@@ -308,9 +286,8 @@ class VhdlIRBuilder(IRBuilder):
         }
 
         # Extract each port declaration
-        for child in interface_list.children:
-            if child.type == "interface_declaration":
-                self._extract_single_port(child, module, direction_map)
+        for interface_decl in self._all(interface_list, "interface_declaration"):
+            self._extract_single_port(interface_decl, module, direction_map)
 
     def _extract_single_port(self, interface_decl, module, direction_map):
         """
@@ -325,22 +302,24 @@ class VhdlIRBuilder(IRBuilder):
         direction = "input"  # default
         width = None
 
-        # Extract name, direction, and width
-        for child in interface_decl.children:
-            if child.type == "identifier_list":
-                # Get first identifier (VHDL allows multiple names, but we take first)
-                for id_child in child.children:
-                    if id_child.type == "identifier":
-                        name = id_child.text.decode("utf8")
-                        break
-            elif child.type == "simple_mode_indication":
-                # Extract direction
-                for mode_child in child.children:
-                    if mode_child.type == "mode":
-                        direction = direction_map.get(mode_child.text.decode("utf8"), "input")
-                        break
-                # Extract width from std_logic_vector in simple_mode_indication
-                width = self._extract_width_from_simple_mode(child)
+        # Extract name from identifier_list
+        id_list = self._first(interface_decl, "identifier_list")
+        if id_list:
+            id_node = self._first(id_list, "identifier")
+            if id_node:
+                name = self._get_text(id_node)
+
+        # Extract direction and width from simple_mode_indication
+        mode_indication = self._first(interface_decl, "simple_mode_indication")
+        if mode_indication:
+            # Extract direction
+            mode_node = self._first(mode_indication, "mode")
+            if mode_node:
+                direction_text = self._get_text(mode_node)
+                direction = direction_map.get(direction_text, "input")
+
+            # Extract width from std_logic_vector in simple_mode_indication
+            width = self._extract_width_from_simple_mode(mode_indication)
 
         if name:
             port_obj = Port(name=name, direction=direction)
@@ -362,9 +341,9 @@ class VhdlIRBuilder(IRBuilder):
             Tuple of (msb, lsb) as strings, or None
         """
         # Look for subtype_indication within simple_mode_indication
-        for child in simple_mode_node.children:
-            if child.type == "subtype_indication":
-                return self._extract_width_from_subtype(child)
+        subtype_indication = self._first(simple_mode_node, "subtype_indication")
+        if subtype_indication:
+            return self._extract_width_from_subtype(subtype_indication)
 
         return None
 
@@ -379,55 +358,54 @@ class VhdlIRBuilder(IRBuilder):
             Tuple of (msb, lsb) as strings, or None
         """
         # Look for array_range_constraint (Verilog-style)
-        for child in subtype_node.children:
-            if child.type == "array_range_constraint":
-                # Should have format like (7 downto 0)
-                for range_child in child.children:
-                    if range_child.type == "range":
-                        # Extract msb and lsb
-                        msb = None
-                        lsb = None
-                        direction = None
+        range_constraint = self._first(subtype_node, "array_range_constraint")
+        if range_constraint:
+            # Should have format like (7 downto 0)
+            range_node = self._first(range_constraint, "range")
+            if range_node:
+                # Extract msb, lsb, and direction
+                msb = None
+                lsb = None
+                direction = None
 
-                        for part in range_child.children:
-                            if part.type == "expression":
-                                if msb is None:
-                                    msb = part.text.decode("utf8")
-                                else:
-                                    lsb = part.text.decode("utf8")
-                            elif part.type in ["downto", "to"]:
-                                direction = part.text.decode("utf8")
+                for part in range_node.children:
+                    if part.type == "expression":
+                        if msb is None:
+                            msb = self._get_text(part)
+                        else:
+                            lsb = self._get_text(part)
+                    elif part.type in ["downto", "to"]:
+                        direction = self._get_text(part)
 
-                        if msb and lsb:
-                            # For "downto", return (msb, lsb)
-                            # For "to", return (lsb, msb) since VHDL "to" is ascending
-                            if direction == "downto":
-                                return (msb, lsb)
-                            else:  # "to"
-                                return (lsb, msb)
+                if msb and lsb:
+                    # For "downto"
+                    if direction == "downto":
+                        return (msb, lsb)
+                    # For "to"
+                    return (lsb, msb)
 
         # Look for parenthesis_group (VHDL-style)
-        for child in subtype_node.children:
-            if child.type == "name":
-                for name_child in child.children:
-                    if name_child.type == "parenthesis_group":
-                        # Extract range from parenthesis_group like "(3 downto 0)"
-                        group_text = name_child.text.decode("utf8")
-                        # Remove parentheses
-                        content = group_text.strip("()")
-                        # Split by downto/to
-                        if "downto" in content:
-                            parts = content.split("downto")
-                            if len(parts) == 2:
-                                msb = parts[0].strip()
-                                lsb = parts[1].strip()
-                                return (msb, lsb)
-                        elif "to" in content:
-                            parts = content.split("to")
-                            if len(parts) == 2:
-                                lsb = parts[0].strip()  # VHDL "to" is ascending
-                                msb = parts[1].strip()
-                                return (msb, lsb)
+        name_node = self._first(subtype_node, "name")
+        if name_node:
+            parenthesis_group = self._first(name_node, "parenthesis_group")
+            if parenthesis_group:
+                # Extract range from parenthesis_group like "(3 downto 0)"
+                group_text = self._get_text(parenthesis_group)
+                # Remove parentheses
+                content = group_text.strip("()")
+                # Split by downto/to
+                if "downto" in content:
+                    parts = content.split("downto")
+                    if len(parts) == 2:
+                        msb = parts[0].strip()
+                        lsb = parts[1].strip()
+                        return (msb, lsb)
+                elif "to" in content:
+                    parts = content.split("to")
+                    if len(parts) == 2:
+                        lsb = parts[0].strip()  # VHDL "to" is ascending
+                        msb = parts[1].strip()
+                        return (msb, lsb)
 
         return None
 
@@ -443,16 +421,16 @@ class VhdlIRBuilder(IRBuilder):
         # Look for signal declarations in architecture_head
         for child in architecture_node.children:
             if child.type == "architecture_head":
-                self._extract_signals_from_head(child, module, condition)
+                self._get_signals(child, module, condition)
                 self._extract_constants_from_head(child, module, condition)
             elif child.type == "concurrent_block":
-                self._extract_signals_from_block(child, module, condition)
+                self._get_signals(child, module, condition)
             elif child.type == "for_generate_statement":
                 self._extract_for_generate_statement(child, module)
             elif child.type == "if_generate_statement":
                 self._extract_if_generate_statement(child, module)
 
-    def _extract_signals_from_head(self, head_node, module, condition=None):
+    def _get_signals(self, node, module, condition=None):
         """
         Extract signals from architecture_head.
 
@@ -462,7 +440,7 @@ class VhdlIRBuilder(IRBuilder):
             condition: Optional condition string for generate blocks
         """
         # Signal declarations can be direct children of architecture_head
-        for child in head_node.children:
+        for child in node.children:
             if child.type == "signal_declaration":
                 self._extract_signal_declaration(child, module, condition)
 
@@ -475,15 +453,9 @@ class VhdlIRBuilder(IRBuilder):
             module: Module object to populate
             condition: Optional condition string for generate blocks
         """
-        # Extract signal names
-        identifier_list = None
-        subtype = None
-
-        for child in signal_decl.children:
-            if child.type == "identifier_list":
-                identifier_list = child
-            elif child.type == "subtype_indication":
-                subtype = child
+        # Extract signal names and subtype using _first() method
+        identifier_list = self._first(signal_decl, "identifier_list")
+        subtype = self._first(signal_decl, "subtype_indication")
 
         if not identifier_list or not subtype:
             return
@@ -491,13 +463,13 @@ class VhdlIRBuilder(IRBuilder):
         # Extract width from subtype
         width = self._extract_width_from_subtype(subtype)
 
-        # Determine signal kind based on subtype
-        kind = self._determine_signal_kind(subtype)
+        # Any VHDL type is considered as verilog's logic type
+        kind = "logic"
 
         # Extract each signal name
         for id_child in identifier_list.children:
             if id_child.type == "identifier":
-                name = id_child.text.decode("utf8")
+                name = self._get_text(id_child)
                 signal_obj = Signal(name=name, kind=kind)
 
                 # Handle width if present
@@ -536,30 +508,23 @@ class VhdlIRBuilder(IRBuilder):
         name = ""
         value = None
 
-        # Extract name and value from constant_declaration children
-        for child in const_decl.children:
-            if child.type == "identifier_list":
-                # Get first identifier (VHDL allows multiple names, but we take first)
-                for id_child in child.children:
-                    if id_child.type == "identifier":
-                        name = id_child.text.decode("utf8")
-                        break
-            elif child.type == "initialiser":
-                # Extract value from initialiser
-                for init_child in child.children:
-                    if init_child.type == "conditional_expression":
-                        # Look for the actual value in conditional_expression
-                        for expr_child in init_child.children:
-                            if expr_child.type in ["decimal_integer", "identifier", "literal", "simple_expression"]:
-                                value = expr_child.text.decode("utf8")
-                                break
-                        else:
-                            # If no specific child matched, use the whole conditional_expression
-                            value = init_child.text.decode("utf8")
-                        break
-                    elif init_child.type in ["decimal_integer", "identifier", "literal"]:
-                        value = init_child.text.decode("utf8")
-                        break
+        # Extract name from identifier_list
+        id_list = self._first(const_decl, "identifier_list")
+        if id_list:
+            id_node = self._first(id_list, "identifier")
+            if id_node:
+                name = self._get_text(id_node)
+
+        # Extract value from initialiser
+        initialiser = self._first(const_decl, "initialiser")
+        if initialiser:
+            # Try to get conditional_expression first
+            cond_expr = self._first(initialiser, "conditional_expression")
+            if cond_expr:
+                value = self._get_expression_text(cond_expr)
+            else:
+                # Fallback to direct value types
+                value = self._get_expression_text(initialiser)
 
         if name:
             # Create parameter - store as string to match Verilog behavior
@@ -574,37 +539,6 @@ class VhdlIRBuilder(IRBuilder):
                 param.condition = condition
 
             module.parameters.append(param)
-
-    def _determine_signal_kind(self, subtype_node):
-        """
-        Determine signal kind from subtype_indication.
-
-        Args:
-            subtype_node: subtype_indication node
-
-        Returns:
-            Signal kind as string
-        """
-        # Look for the base type name
-        for child in subtype_node.children:
-            if child.type == "name":
-                type_name = ""
-                # Build the full type name
-                for part in child.children:
-                    if part.type == "identifier":
-                        type_name += part.text.decode("utf8")
-
-                # Map VHDL types to IR kinds
-                if type_name in ["std_logic", "std_ulogic", "bit"]:
-                    return "logic"
-                elif type_name == "std_logic_vector":
-                    return "logic"
-                elif type_name == "integer":
-                    return "logic"  # Treat integer as logic for now
-                else:
-                    return "logic"  # Default
-
-        return "logic"
 
     def _extract_instances(self, architecture_node, module, condition=None):
         """
@@ -659,7 +593,7 @@ class VhdlIRBuilder(IRBuilder):
                     if label_child.type == "identifier":
                         name = label_child.text.decode("utf8")
                         break
-                    elif label_child.type == "label":
+                    if label_child.type == "label":
                         # Alternative: name is in label node
                         name = label_child.text.decode("utf8")
                         break
@@ -700,13 +634,8 @@ class VhdlIRBuilder(IRBuilder):
         Returns:
             Module name as string
         """
-        module_name = ""
-        for child in name_node.children:
-            if child.type == "identifier":
-                if module_name:
-                    module_name += "_"
-                module_name += child.text.decode("utf8")
-        return module_name
+        # Use the existing _get_name_text helper method
+        return self._get_name_text(name_node)
 
     def _extract_for_generate_statement(self, for_gen_node, module):
         """
@@ -767,7 +696,7 @@ class VhdlIRBuilder(IRBuilder):
                         self._extract_generate_block(body_child, module, condition)
                     elif body_child.type == "generate_head":
                         # Extract signals declared in generate head
-                        self._extract_signals_from_generate_head(body_child, module, condition)
+                        self._get_signals(body_child, module, condition)
 
     def _extract_if_generate_statement(self, if_gen_node, module):
         """
@@ -809,37 +738,11 @@ class VhdlIRBuilder(IRBuilder):
         for child in gen_block_node.children:
             if child.type == "concurrent_block":
                 # Extract signals and instances with condition
-                self._extract_signals_from_block(child, module, condition)
+                self._get_signals(child, module, condition)
                 self._extract_instances_from_block(child, module, condition)
             elif child.type == "component_instantiation_statement":
                 # Direct instance in generate block
                 self._extract_component_instance(child, module, condition)
-
-    def _extract_signals_from_block(self, block_node, module, condition=None):
-        """
-        Extract signals from a block (concurrent_block).
-
-        Args:
-            block_node: concurrent_block node
-            module: Module object to populate
-            condition: Optional condition string for generate blocks
-        """
-        for child in block_node.children:
-            if child.type == "signal_declaration":
-                self._extract_signal_declaration(child, module, condition)
-
-    def _extract_signals_from_generate_head(self, generate_head_node, module, condition=None):
-        """
-        Extract signals from a generate_head node.
-
-        Args:
-            generate_head_node: generate_head node
-            module: Module object to populate
-            condition: Optional condition string for generate blocks
-        """
-        for child in generate_head_node.children:
-            if child.type == "signal_declaration":
-                self._extract_signal_declaration(child, module, condition)
 
     def _extract_parameters_from_generic_map(self, generic_map_node):
         """
@@ -854,31 +757,33 @@ class VhdlIRBuilder(IRBuilder):
         parameters = {}
 
         # Find association_list
-        for child in generic_map_node.children:
-            if child.type == "association_list":
-                for assoc in child.children:
-                    if assoc.type == "association_element":
-                        param_name = ""
-                        param_value = ""
+        association_list = self._first(generic_map_node, "association_list")
+        if not association_list:
+            return parameters
 
-                        # VHDL structure: name => value (no formal/actual parts)
-                        # Look for name and value directly in children
-                        for i, part in enumerate(assoc.children):
-                            if part.type == "name":
-                                # Extract parameter name
-                                param_name = part.text.decode("utf8")
-                            elif part.type == "conditional_expression":
-                                # Extract parameter value
-                                param_value = part.text.decode("utf8")
-                            elif part.type == "literal":
-                                # Alternative: value in literal
-                                param_value = part.text.decode("utf8")
-                            elif part.type == "identifier":
-                                # Alternative: value in identifier
-                                param_value = part.text.decode("utf8")
+        # Process each association element
+        for assoc in self._all(association_list, "association_element"):
+            param_name = ""
+            param_value = ""
 
-                        if param_name and param_value:
-                            parameters[param_name] = param_value
+            # Extract parameter name from name node
+            name_node = self._first(assoc, "name")
+            if name_node:
+                param_name = self._get_text(name_node)
+
+            # Extract parameter value from various expression types
+            value_node = None
+            for value_type in ["conditional_expression", "literal", "identifier"]:
+                potential_node = self._first(assoc, value_type)
+                if potential_node:
+                    value_node = potential_node
+                    break
+
+            if value_node:
+                param_value = self._get_text(value_node)
+
+            if param_name and param_value:
+                parameters[param_name] = param_value
 
         return parameters
 
@@ -895,41 +800,31 @@ class VhdlIRBuilder(IRBuilder):
         connections = {}
 
         # Find association_list
-        for child in port_map_node.children:
-            if child.type == "association_list":
-                for assoc in child.children:
-                    if assoc.type == "association_element":
-                        port_name = ""
-                        signal_name = ""
+        association_list = self._first(port_map_node, "association_list")
+        if not association_list:
+            return connections
 
-                        # VHDL structure: name => conditional_expression
-                        # Look for name and conditional_expression directly in children
-                        for part in assoc.children:
-                            if part.type == "name":
-                                # Extract port name from name node
-                                for name_child in part.children:
-                                    if name_child.type in ["identifier", "library_type"]:
-                                        port_name = name_child.text.decode("utf8")
-                                        break
-                            elif part.type == "conditional_expression":
-                                # Extract signal name from conditional_expression
-                                # Look for identifier in the expression
-                                for expr_child in part.children:
-                                    if expr_child.type == "simple_expression":
-                                        for simple_child in expr_child.children:
-                                            if simple_child.type == "name":
-                                                for name_child in simple_child.children:
-                                                    if name_child.type == "identifier":
-                                                        signal_name = name_child.text.decode("utf8")
-                                                        break
-                                            elif simple_child.type == "identifier":
-                                                signal_name = simple_child.text.decode("utf8")
-                                                break
-                                    elif expr_child.type == "identifier":
-                                        signal_name = expr_child.text.decode("utf8")
-                                        break
+        # Process each association element
+        for assoc in self._all(association_list, "association_element"):
+            port_name = ""
+            signal_name = ""
 
-                        if port_name and signal_name:
-                            connections[port_name] = signal_name
+            # Extract port name from name node
+            name_node = self._first(assoc, "name")
+            if name_node:
+                # Try identifier first, then library_type
+                port_name = self._get_identifier_text(name_node)
+                if not port_name:
+                    id_node = self._first(name_node, "library_type")
+                    if id_node:
+                        port_name = self._get_text(id_node)
+
+            # Extract signal name from conditional_expression
+            cond_expr = self._first(assoc, "conditional_expression")
+            if cond_expr:
+                signal_name = self._get_expression_text(cond_expr)
+
+            if port_name and signal_name:
+                connections[port_name] = signal_name
 
         return connections

@@ -49,15 +49,12 @@ class SystemVerilogIRBuilder(IRBuilder):
         if header is None:
             header = self._first(node, "module_nonansi_header")
 
-        name_node = next(
-            (c for c in header.children if c.type == "simple_identifier"),
-            None
-        )
+        name_node = self._first(header, "simple_identifier")
 
         if name_node is None:
             raise RuntimeError("Nom du module introuvable")
 
-        return name_node.text.decode()
+        return self._get_text(name_node)
 
     # ---------------------------------------------------------
     # Ports (ANSI style)

@@ -63,3 +63,62 @@ class IRBuilder:
             List of all children with matching type
         """
         return [c for c in node.named_children if c.type == type_name]
+
+    # --------------------------------------------------------------
+    # Generic text extraction utilities
+    # --------------------------------------------------------------
+
+    def _get_text(self, node):
+        """Get text content from a node.
+
+        Args:
+            node: AST node
+
+        Returns:
+            Decoded text string, or empty string if node is None
+        """
+        if node:
+            return node.text.decode("utf8")
+        return ""
+
+    def _get_identifier_text(self, node):
+        """Get text from an identifier node.
+
+        Args:
+            node: Identifier node or parent node containing identifier
+
+        Returns:
+            Identifier text, or empty string if not found
+        """
+        if node and node.type == "identifier":
+            return self._get_text(node)
+
+        # Look for identifier child
+        id_node = self._first(node, "identifier")
+        if id_node:
+            return self._get_text(id_node)
+
+        return ""
+
+    def _get_expression_text(self, node):
+        """Get text from an expression node.
+
+        Args:
+            node: Expression node
+
+        Returns:
+            Expression text, or empty string if not found
+        """
+        if not node:
+            return ""
+
+        # Try to find the most specific expression child
+        # Different languages may override this with their specific expression types
+        expr_types = ["number", "identifier", "string_literal", "literal"]
+        for expr_type in expr_types:
+            expr_node = self._first(node, expr_type)
+            if expr_node:
+                return self._get_text(expr_node)
+
+        # Fallback: return the whole node text
+        return self._get_text(node)

@@ -51,6 +51,18 @@ def is_systemverilog(path: str) -> bool:
     return path.suffix == ".sv"
 
 
+def is_vhdl(path: str) -> bool:
+    """Check if a file path has a VHDL (.vhd) extension.
+
+    Args:
+        path: Path object to check
+
+    Returns:
+        True if the path has a .vhd extension, False otherwise
+    """
+    return path.suffix == ".vhd"
+
+
 def main():
     """Main entry point for HDLr tool.
 
@@ -64,7 +76,7 @@ def main():
             "[bold cyan]HDLr[/bold cyan] - Hardware Design Language Parser & Elaborator",
             border_style="bold blue",
             title="Welcome",
-            subtitle="Verilog/SystemVerilog Analysis Tool"
+            subtitle="Verilog/SystemVerilog/VHDL Analysis Tool"
         )
     )
 
@@ -99,6 +111,8 @@ def scan(inputs):
             frontend = get_frontend("verilog")
         elif is_systemverilog(f):
             frontend = get_frontend("systemverilog")
+        elif is_vhdl(f):
+            frontend = get_frontend("vhdl")
         else:
             continue
 
