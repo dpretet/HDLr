@@ -162,7 +162,6 @@ class VhdlIRBuilder(IRBuilder):
         Returns:
             Entity name as string
         """
-        # Use _first() method from base class
         id_node = self._first(entity_node, "identifier")
         if id_node:
             return self._get_text(id_node)
@@ -178,7 +177,6 @@ class VhdlIRBuilder(IRBuilder):
         Returns:
             Entity name as string
         """
-        # Use _first() method from base class
         name_node = self._first(architecture_node, "name")
         if name_node:
             return self._get_name_text(name_node)
@@ -590,21 +588,21 @@ class VhdlIRBuilder(IRBuilder):
                 # label_declaration contains the instance name
                 for label_child in child.children:
                     if label_child.type == "identifier":
-                        name = label_child.text.decode("utf8")
+                        name = self._get_text(label_child)
                         break
                     if label_child.type == "label":
                         # Alternative: name is in label node
-                        name = label_child.text.decode("utf8")
+                        name = self._get_text(label_child)
                         break
             elif child.type == "instantiated_unit":
                 # Extract module name
                 for unit_child in child.children:
                     if unit_child.type == "name":
-                        module_name = self._extract_module_name_from_name(unit_child)
+                        module_name = self._get_name_text(unit_child)
                         break
             elif child.type == "name":
                 # Direct name (alternative VHDL syntax)
-                module_name = self._extract_module_name_from_name(child)
+                module_name = self._get_name_text(child)
             elif child.type == "generic_map_aspect":
                 # Extract parameters
                 parameters = self._extract_parameters_from_generic_map(child)
@@ -623,18 +621,6 @@ class VhdlIRBuilder(IRBuilder):
 
             module.instances.append(instance_obj)
 
-    def _extract_module_name_from_name(self, name_node):
-        """
-        Extract module name from name node.
-
-        Args:
-            name_node: name node
-
-        Returns:
-            Module name as string
-        """
-        # Use the existing _get_name_text helper method
-        return self._get_name_text(name_node)
 
     def _extract_for_generate_statement(self, for_gen_node, module):
         """
@@ -659,17 +645,17 @@ class VhdlIRBuilder(IRBuilder):
                         # Extract loop variable
                         for param_child in loop_child.children:
                             if param_child.type == "identifier":
-                                loop_var = param_child.text.decode("utf8")
+                                loop_var = self._get_text(param_child)
                             elif param_child.type == "simple_range":
                                 # Extract range
                                 for range_child in param_child.children:
                                     if range_child.type == "simple_expression":
                                         if not range_start:
-                                            range_start = range_child.text.decode("utf8")
+                                            range_start = self._get_text(range_child)
                                         else:
-                                            range_end = range_child.text.decode("utf8")
+                                            range_end = self._get_text(range_child)
                                     elif range_child.type in ["to", "downto"]:
-                                        direction = range_child.text.decode("utf8")
+                                        direction = self._get_text(range_child)
 
         # Create condition string
         if loop_var and range_start and range_end:
